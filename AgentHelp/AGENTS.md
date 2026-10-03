@@ -42,7 +42,10 @@
   包名 `ehbot_mobile`、org `com.ehbot`、平台 android/ios。装别处时先 `flutter --version`
   对齐版本，避免「我这是好的」类争议。
 - 开发机**暂无 Android SDK / Chrome**：`flutter analyze`、`flutter test` 不需要它们，
-  只有 `flutter run` / 打 APK / web 才需要。
+  只有 `flutter run` / 打 APK / web 才需要。**没有真机 / 真实后端验证**：
+  M1–M4 的验证是 `flutter analyze` + `flutter test`（MockClient 假后端）+
+  对照 EhBot 源码核对响应字段，端到端待运营者用自己的部署试跑。
+- 依赖：`http`、`flutter_secure_storage`、`shared_preferences`、`path_provider`。
 - 写文件用 UTF-8、LF；改含中文的源文件优先用脚本（`io.open(..., encoding="utf-8",
   newline="\n")`），避免 shell 重定向把编码搞坏。
 - 命令：`flutter pub get`、`flutter analyze`、`flutter test`、`dart format`。
@@ -50,8 +53,8 @@
 ## 测试基线
 
 - 约定：`flutter analyze` 零告警；`flutter test` 的用例数作为基线，只增不减。
-- **M0 基线：`1 tests / 0 failed`**（`test/app_test.dart`）。以后每期更新，
-  格式「`N tests / 0 failed`」，并同步 `progress.md` 与 `PHASES.md` 的基线链。
+- **M4 基线：`90 tests / 0 failed`**（M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90）。
+  以后每期更新，格式「`N tests / 0 failed`」，并同步 `progress.md` 与 `PHASES.md` 的基线链。
 - CI：`.github/workflows/ci.yml` 锁定 Flutter 3.47.6，push / PR 都跑 analyze + test。
 - 后端回归基线（EhBot 侧）当前为 R52 = `1690 collected / 0 failed`；本仓库不改后端。
 

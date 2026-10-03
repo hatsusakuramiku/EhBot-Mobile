@@ -1,0 +1,92 @@
+import 'package:http/http.dart' as http;
+
+import 'auth_client.dart';
+import 'json_io.dart';
+import 'models.dart';
+
+/// `/api/v1` 数据端点：读为主，另含候选审核（走批量端点，单个也是批量）。
+///
+/// 响应解析全部容错（见 `models.dart` 的解析助手），后端多 / 少一个键不会崩。
+class EhBotApi {
+  EhBotApi(this.client);
+
+  final AuthClient client;
+
+  Future<Summary> summary() async =>
+      Summary.fromJson(_ok(await client.get('/api/v1/summary')));
+
+  Future<CandidatePage> candidates({
+    String tab = 'pending',
+    String search = '',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final http.Response response = await client.get(
+      '/api/v1/candidates',
+      query: <String, String>{
+        'tab': tab,
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        'page': '$page',
+        'page_size': '$pageSize',
+      },
+    );
+    return CandidatePage.fromJson(_ok(response));
+  }
+
+  Future<WorkDetail> work(String candidateId) async =>
+      WorkDetail.fromJson(_ok(await client.get('/api/v1/works/$candidateId')));
+
+  /// 通过 / 驳回。[action] 取 `approve` 或 `reject`。
+  Future<ReviewBatchResult> review({
+    required String action,
+    required List<String> candidateIds,
+  }) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/candidates/batch',
+      body: <String, Object?>{
+        'action': action,
+        'candidate_ids': candidateIds.map(_asId).toList(),
+      },
+    );
+    return ReviewBatchResult.fromJson(_ok(response));
+  }
+
+  Future<QueueSnapshot> queue() async =>
+      QueueSnapshot.fromJson(_ok(await client.get('/api/v1/queue')));
+
+  Future<List<JobSummary>> history({int limit = 50}) async {
+    final Map<String, dynamic> json = _ok(
+      await client.get(
+        '/api/v1/history',
+        query: <String, String>{'limit': '$limit'},
+      ),
+    );
+    return asMapList(json['items']).map(JobSummary.fromJson).toList();
+  }
+
+  Future<DownloadedPage> downloaded({
+    String tab = 'all',
+    String search = '',
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final http.Response response = await client.get(
+      '/api/v1/downloaded',
+      query: <String, String>{
+        'tab': tab,
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        'page': '$page',
+        'page_size': '$pageSize',
+      },
+    );
+    return DownloadedPage.fromJson(_ok(response));
+  }
+
+  Future<ClientMeta> meta() async =>
+      ClientMeta.fromJson(_ok(await client.get('/api/v1/meta')));
+
+  Map<String, dynamic> _ok(http.Response response) =>
+      decodeJsonObject(ensureSuccess(response));
+
+  Object _asId(String id) => int.tryParse(id) ?? id;
+}

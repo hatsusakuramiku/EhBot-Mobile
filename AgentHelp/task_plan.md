@@ -3,7 +3,7 @@
 | 编号 | 主题 | 状态 | 提交 | 记录 |
 |------|------|------|------|------|
 | M0 | 建仓库 + 文档骨架 + Flutter 工程 + CI | 完成 | — | `progress.md` M0 |
-| M1 | 连接配置 + 双登录 + 会话保持 | 未开始 | — | `DEVELOPMENT_PLAN.md` §2 |
-| M2 | 缩略图带鉴权加载器 | 未开始 | — | `CONTRACT.md` §3 |
-| M3 | 工作台 / 候选 / 审核 / 活动 / 已下载 | 未开始 | — | `DEVELOPMENT_PLAN.md` §2 |
-| M4 | SSE + 轮询回退 + v0.1.0 | 未开始 | — | `DEVELOPMENT_PLAN.md` §1 |
+| M1 | 连接配置 + 双登录 + 会话保持 | 完成 | — | `progress.md` M1 |
+| M2 | 缩略图带鉴权加载器 | 完成 | — | `progress.md` M2 |
+| M3 | 工作台 / 候选 / 审核 / 活动 / 已下载 | 完成 | — | `progress.md` M3 |
+| M4 | SSE + 轮询回退 + v0.1.0 | 完成 | — | `progress.md` M4 |

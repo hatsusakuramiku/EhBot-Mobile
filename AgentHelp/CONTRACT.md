@@ -91,6 +91,26 @@
   客户端应读回显而不是自己推导。
 - POST 的写操作走 Bearer 时无需 CSRF；浏览器网页端仍要求 `X-CSRF-Token`。
 
+## 5.1 已核对的响应形状（M3 实现时对照 EhBot 源码）
+
+- `/summary`：`{candidates: {<count key>: int, total}, activity: {downloads, packing, live},
+  attention: {total, items: [job_summary]}, connections, startup_errors}`
+  （count key = `CANDIDATE_COUNT_KEYS`：`pending_review` / `needs_info` / …）。
+- `/candidates`：通用信封 + `counts`（按状态）+ `tab_counts`（按 tab）+ `tab` / `sort` /
+  `direction` / `search` / `filters`。列表项字段见 `candidate_summary`，
+  其中 `cover` 是 `{url, hash}`（hash 即缩略图路径参数），`actions:{approve,reject}`。
+- `/works/{candidate_id}`：详情没有顶层 `artist/category/tags/cover`，正文在
+  `metadata`（含 `field_label`/`field_value`/`is_manual`/`is_locked`）、`timeline`
+  （含 `action_view.label` / `reason` / `created_at`）、`messages`、`jobs`、`archive`、`actions`。
+- `/queue`：`{downloads: [{group, count, jobs}], packing: [...], counts:{downloads,packing},
+  attention:{total,reasons}, live}`（后端已分好组，客户端不重新分组）。
+- `/history`：`{items: [job_summary], total, limit}`。
+- `/downloaded`：**列表键是 `works`（不是 `items`）**，附 `tab` / `tab_view` / `direction` /
+  `counts` / `total` / `live`。客户端兼容 `works` 与 `items` 两种键。
+- `/candidates/batch`：`{action, requested, applied: [...], skipped: [{code, message}]}`；
+  单个候选也走这个端点。
+- `/meta`：`polling.interval_ms` / `polling.idle_interval_ms`（客户端轮询回退间隔）。
+
 ## 6. 未决 / 注意
 
 - 后端没有 `api.version`（已定）：客户端靠 `POST /api/v1/auth/login` 是否 404 探测。

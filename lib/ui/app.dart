@@ -1,28 +1,38 @@
 import 'package:flutter/material.dart';
 
-/// 应用根组件。M0 只有骨架页，M1 起接入服务器配置与登录流程。
+import '../state/app_state.dart';
+import 'home_shell.dart';
+import 'login_page.dart';
+import 'server_setup_page.dart';
+
+/// 应用根：按 [AppState.stage] 决定首屏。
 class EhBotApp extends StatelessWidget {
-  const EhBotApp({super.key});
+  const EhBotApp({super.key, required this.state});
+
+  final AppState state;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'EhBot',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo),
-      home: const SkeletonPage(),
+    return AnimatedBuilder(
+      animation: state,
+      builder: (BuildContext context, Widget? child) => MaterialApp(
+        title: 'EhBot',
+        theme: ThemeData(colorSchemeSeed: Colors.indigo),
+        home: switch (state.stage) {
+          AppStage.loading => const _LoadingPage(),
+          AppStage.serverSetup => ServerSetupPage(state: state),
+          AppStage.login => LoginPage(state: state),
+          AppStage.ready => HomeShell(state: state),
+        },
+      ),
     );
   }
 }
 
-/// 占位首页：证明工程可构建、可测试，不含任何业务逻辑。
-class SkeletonPage extends StatelessWidget {
-  const SkeletonPage({super.key});
+class _LoadingPage extends StatelessWidget {
+  const _LoadingPage();
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('EhBot')),
-      body: const Center(child: Text('工程骨架已就位，界面自 M1 起实现。')),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }

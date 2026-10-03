@@ -24,7 +24,22 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 质量门禁（本地与 CI 同一套，Flutter 锁定 3.47.6）：
 
     flutter analyze  # 要求零告警
-    flutter test     # 当前基线 1 tests / 0 failed
+    flutter test     # 当前基线 90 tests / 0 failed
+
+## 使用
+
+登录后是四个页面（底部导航）：
+
+- **工作台**：候选计数、活动概况（下载中 / 打包中）、需干预清单。
+- **候选**：tab（全部 / 待审核 / 待补充 / 已通过 / 已驳回 / 失败）+ 搜索 + 加载更多；
+  点开是详情（封图、状态、元数据、时间线），底部可**通过 / 驳回**，成功后列表自动刷新。
+- **活动**：下载 / 打包队列按后端分组展示 + 已完成历史（本期只读）。
+- **已下载**：搜索 + 加载更多；显示状态与打包状态。
+
+**实时**：客户端优先消费 `/api/v1/events`（SSE，带 `Authorization` 头）；
+断流会按 `/api/v1/meta` 的 `polling.interval_ms` 自动回退轮询，并周期性重试恢复。
+回退期间顶部会出现「实时连接已断开，已回退轮询」横幅，可手动重试；各页面在每次
+实时 tick 到来时自动刷新。
 
 ## 登录
 
@@ -46,4 +61,6 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 | `AgentHelp/MOBILE.md` | 需求规格 |
 | `AgentHelp/DEVELOPMENT_PLAN.md` | 分期计划与 MVP 验收线 |
 | `AgentHelp/CONTRACT.md` | 依赖的后端 API 契约与最低后端版本 |
-| `AgentHelp/MOBILE_CLIENT_PROPOSAL.md` | 已审阅的设计记录（含后端改动） |
+| `AgentHelp/MOBILE_CLIENT_PROPOSAL.md` | 已审阅的整体设计记录（含后端改动） |
+| `AgentHelp/M1_AUTH_PROPOSAL.md` 等 | M1–M4 各期的实现设计记录（先方案后开工） |
+| `CHANGELOG.md` | 版本变更与已知限制 |
