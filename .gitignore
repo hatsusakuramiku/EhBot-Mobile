@@ -1,0 +1,35 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# iOS / macOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+macos/Pods/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# codegraph 本地索引（Dart 不受支持，仅保留约定与忽略项）
+.codegraph/
+
+# 本地环境与密钥，绝不入库
+.env
+*.env
