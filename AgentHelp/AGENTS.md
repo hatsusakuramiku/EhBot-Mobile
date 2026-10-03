@@ -36,8 +36,13 @@
 ## 环境
 
 - 本仓库当前在 Linux 容器里开发：`bash`、UTF-8、POSIX 工具链。
-- **Flutter SDK 尚未安装**（`flutter`/`dart` 不在 PATH）。M0 期第一步安装并把版本写进
-  `progress.md`；建议用 FVM 或记录 `flutter --version` 输出，避免「我这是好的」类争议。
+- **Flutter 3.47.6 stable**（Dart 3.13.5、DevTools 2.60.0；framework revision
+  `5fc346839b`）装在 `/home/coder/flutter`，`flutter`/`dart` 已在 PATH
+  （`/usr/local/bin` 软链 + `~/.bashrc`）。工程由 `flutter create --empty` 生成：
+  包名 `ehbot_mobile`、org `com.ehbot`、平台 android/ios。装别处时先 `flutter --version`
+  对齐版本，避免「我这是好的」类争议。
+- 开发机**暂无 Android SDK / Chrome**：`flutter analyze`、`flutter test` 不需要它们，
+  只有 `flutter run` / 打 APK / web 才需要。
 - 写文件用 UTF-8、LF；改含中文的源文件优先用脚本（`io.open(..., encoding="utf-8",
   newline="\n")`），避免 shell 重定向把编码搞坏。
 - 命令：`flutter pub get`、`flutter analyze`、`flutter test`、`dart format`。
@@ -45,8 +50,9 @@
 ## 测试基线
 
 - 约定：`flutter analyze` 零告警；`flutter test` 的用例数作为基线，只增不减。
-- **M0 之前没有测试**：基线为 0。M0 建好工程后在 `progress.md` 记录首个数字，
-  以后每期更新，格式「`N tests / 0 failed`」。
+- **M0 基线：`1 tests / 0 failed`**（`test/app_test.dart`）。以后每期更新，
+  格式「`N tests / 0 failed`」，并同步 `progress.md` 与 `PHASES.md` 的基线链。
+- CI：`.github/workflows/ci.yml` 锁定 Flutter 3.47.6，push / PR 都跑 analyze + test。
 - 后端回归基线（EhBot 侧）当前为 R52 = `1690 collected / 0 failed`；本仓库不改后端。
 
 ## 架构规则与不变量

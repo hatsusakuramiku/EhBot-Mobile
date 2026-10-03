@@ -11,18 +11,20 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 
 ## 前置
 
-- Flutter SDK（版本记录在 `AgentHelp/AGENTS.md`；**当前开发机尚未安装 `flutter`/`dart`**，
-  M0 期先装好并在 `progress.md` 记录版本）。
-- Android SDK 或 Xcode 之一。
+- Flutter **3.47.6** stable / Dart 3.13.5（安装路径、基线见 `AgentHelp/AGENTS.md`）。
+- Android SDK 或 Xcode 之一（`flutter analyze` / `flutter test` 不需要，`flutter run` 需要）。
 - 一个已部署并**已启用移动端鉴权**的 EhBot 服务端（需要后端 B1/B2，见 `CONTRACT.md`）。
   R52（v0.3.0rc2）还不含该鉴权，`POST /api/v1/auth/login` 会是 404。
 
 ## 快速开始
 
-M0 建立 Flutter 工程后补全：
-
     flutter pub get
-    flutter run
+    flutter run      # 需要 Android SDK 或 Xcode
+
+质量门禁（本地与 CI 同一套，Flutter 锁定 3.47.6）：
+
+    flutter analyze  # 要求零告警
+    flutter test     # 当前基线 1 tests / 0 failed
 
 ## 登录
 

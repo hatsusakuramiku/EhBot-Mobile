@@ -18,4 +18,16 @@
 
 ---
 
-（尚无条目。M0 完成后在此追加第一条。）
+## M0 · 2026-10-03 · Flutter 工程骨架 + CI（analyze / test 首基线）
+
+- 版本：Flutter 3.47.6 stable（Dart 3.13.5、DevTools 2.60.0，framework revision `5fc346839b`）
+- 测试基线：`1 tests / 0 failed`（`flutter analyze` 零告警）
+- 后端依赖：B1 / B2 均未部署；M0 不依赖后端（`/api/v1/auth/login` 仍会是 404）
+- 改动：`flutter create --empty`（包名 `ehbot_mobile`、org `com.ehbot`、平台 android/ios）；
+  `lib/main.dart` 引导 + `lib/ui/app.dart` 骨架页；`lib/api`、`lib/state`、`lib/media`
+  三层占位落位（M1 / M2 填充）；`test/app_test.dart` 首条 widget 测试；
+  `.github/workflows/ci.yml`（Flutter 3.47.6，`flutter analyze` + `flutter test`）。
+- 验证：`flutter analyze` → No issues found!；`flutter test` → All tests passed!（1 条）；
+  `dart format lib test` → 0 changed。
+- 文档：`README.md`（前置 / 快速开始改为真实命令与基线）、`AgentHelp/AGENTS.md`
+  （环境与测试基线）、`AgentHelp/PHASES.md`（M0 完成 + 基线链）、`AgentHelp/task_plan.md`。

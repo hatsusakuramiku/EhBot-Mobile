@@ -33,3 +33,6 @@ macos/Pods/
 # 本地环境与密钥，绝不入库
 .env
 *.env
+
+# Flutter 命令行工具状态（在本仓库运行 flutter 时落到根目录）
+.config/
