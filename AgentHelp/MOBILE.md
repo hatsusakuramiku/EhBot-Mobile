@@ -1,4 +1,4 @@
-# 需求规格：ehbot-mobile
+# 需求规格：EhBot-Mobile
 
 ## 1. 这是什么
 

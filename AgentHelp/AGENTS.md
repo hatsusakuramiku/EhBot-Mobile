@@ -1,4 +1,4 @@
-# ehbot-mobile — Agent Notes
+# EhBot-Mobile — Agent Notes
 
 `EhBot` 的 Flutter 移动客户端。连接自建后端，用密码或 API Key 登录，浏览工作台 /
 候选 / 活动 / 已下载，并对候选执行通过 / 驳回。
@@ -65,7 +65,7 @@
 ## 测试基线
 
 - 约定：`flutter analyze` 零告警；`flutter test` 的用例数作为基线，只增不减。
-- **M4 基线：`90 tests / 0 failed`**（M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90）。
+- **M5 基线：`90 tests / 0 failed`**（M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90）。
   以后每期更新，格式「`N tests / 0 failed`」，并同步 `progress.md` 与 `PHASES.md` 的基线链。
 - CI：`.github/workflows/ci.yml` 锁定 Flutter 3.47.6，push / PR 都跑 analyze + test。
 - 后端回归基线（EhBot 侧）当前为 R52 = `1690 collected / 0 failed`；本仓库不改后端。

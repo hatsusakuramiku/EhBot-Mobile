@@ -1,4 +1,4 @@
-# ehbot-mobile — Agent Notes (pointer)
+# EhBot-Mobile — Agent Notes (pointer)
 
 本仓库的工作笔记在 **`AgentHelp/AGENTS.md`**，其 scope 是整个仓库；动手前先读它。
 这份 stub 留在仓库根，只是因为 agent 约定在根目录找 `AGENTS.md`。

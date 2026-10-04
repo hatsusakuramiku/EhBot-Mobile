@@ -5,6 +5,10 @@
 > 本仓库负责 M0–M4。两边若不一致，后端部分以 EhBot 副本为准，
 > 移动端部分以本仓库为准；契约事实统一看 `CONTRACT.md`。
 
+> **仓库重命名说明（2026-10-04）**：本文件保留原始审阅时的仓库名与路径。下文中的
+> `ehbot-mobile` 和 `/home/coder/workspace/ehbot-mobile` 均指当前的
+> `EhBot-Mobile` / `/home/coder/workspace/EhBot-Mobile`；Dart 包名 `ehbot_mobile` 不变。
+
 > 状态：**已审阅通过（2026-10-03，第二稿）**。B1/B2 待在 EhBot 仓库实施；
 > M0–M4 在 `/home/coder/workspace/ehbot-mobile` 实施（该仓库已按 §8 建好文档骨架）。
 > 实施仍遵守 `AgentHelp/AGENTS.md`：一期一个 commit，代码/测试/文档同步。

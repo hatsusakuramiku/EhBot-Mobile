@@ -90,3 +90,17 @@
 - 文档：新增 `AgentHelp/M4_REALTIME_PROPOSAL.md`；`README.md`（使用 / 实时章节）、
   `CHANGELOG.md`、`progress.md` / `PHASES.md` / `AGENTS.md` 同步。
 - 遗留：活动页只读；无真机 / 真实后端端到端验证（待运营者用自己的部署试跑）。
+
+## M5 · 2026-10-04 · 仓库改名 `ehbot-mobile` → `EhBot-Mobile`
+
+- 版本：仓库改名；App 版本仍为 v0.1.0，发布标识不变
+- 测试基线：`90 tests / 0 failed`（`flutter analyze` 零告警）
+- 后端依赖：B1 / B2 未部署；本次不改后端契约
+- 改动：本地仓库目录改为 `/home/coder/workspace/EhBot-Mobile`；当前文档统一使用
+  `EhBot-Mobile`；历史方案保留原文并增加重命名说明。Dart 包名 `ehbot_mobile`、
+  Android applicationId 与 iOS bundle ID 均不变。
+- 验证：`flutter analyze` 零告警；`flutter test` → 90 tests 全过；
+  `git grep` 确认旧仓库名只保留在历史方案说明中。
+- 文档：新增 `AgentHelp/REPOSITORY_RENAME_PROPOSAL.md`；`README.md`、根 `AGENTS.md`、
+  `AgentHelp/AGENTS.md`、`AgentHelp/MOBILE.md`、`AgentHelp/PHASES.md` 同步。
+- 远端：仓库未配置 Git remote，暂无可用推送凭据；远端创建 / 配置后待推送。

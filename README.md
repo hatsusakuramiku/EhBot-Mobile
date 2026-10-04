@@ -1,4 +1,4 @@
-# ehbot-mobile
+# EhBot-Mobile
 
 EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**或 **API Key** 登录，
 浏览工作台、候选、活动队列与已下载内容，并对候选执行通过 / 驳回。
