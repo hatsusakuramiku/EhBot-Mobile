@@ -27,8 +27,9 @@
   四块数据页与审核、SSE + 轮询回退；基线 `90 tests / 0 failed`，
   即 `DEVELOPMENT_PLAN.md` §1 的 v0.1.0 验收线（就绪待真机试跑）。
 - MVP 验收线见 `DEVELOPMENT_PLAN.md` §1；达成即 v0.1.0 可试用。
-- 已知前置：开发机已装 Flutter 3.47.6（Android SDK 未装，只影响 `flutter run`）；
-  后端 B1/B2 未实施，`/api/v1/auth/login` 目前为 404。
+- 已知前置：开发机已装 Flutter 3.47.6 + Android SDK（android-36/build-tools 36.0.0/NDK 28.2），
+  `flutter build apk --debug` 已通过；无 `/dev/kvm`、无真机、无 Chrome，故 `flutter run`
+  到 Android/web 仍不可行。后端 B1/B2 未实施，`/api/v1/auth/login` 目前为 404。
 - 未验证项：**没有真机 / 真实后端**，M1–M4 的验证是 analyze + 单测/widget 测试
   （MockClient 假后端）+ 对照 EhBot 源码核对字段；端到端待运营者用自己的部署试跑。
 - 后续版本（不在本期）：活动页任务操作（重试 / 取消 / 优先级）、设置编辑、批量操作、

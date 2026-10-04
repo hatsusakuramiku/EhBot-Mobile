@@ -41,10 +41,22 @@
   （`/usr/local/bin` 软链 + `~/.bashrc`）。工程由 `flutter create --empty` 生成：
   包名 `ehbot_mobile`、org `com.ehbot`、平台 android/ios。装别处时先 `flutter --version`
   对齐版本，避免「我这是好的」类争议。
-- 开发机**暂无 Android SDK / Chrome**：`flutter analyze`、`flutter test` 不需要它们，
-  只有 `flutter run` / 打 APK / web 才需要。**没有真机 / 真实后端验证**：
-  M1–M4 的验证是 `flutter analyze` + `flutter test`（MockClient 假后端）+
-  对照 EhBot 源码核对响应字段，端到端待运营者用自己的部署试跑。
+- **Android 工具链已装**（2026-10-04）：SDK 在 `/home/coder/Android/Sdk`
+  （platform `android-36` + `android-35`、build-tools `36.0.0`、platform-tools、
+  NDK `28.2.13676358`、CMake `3.22.1`），JDK 21 在 `/opt/java`；
+  `~/.bashrc` 已导出 `JAVA_HOME` / `ANDROID_HOME` / `ANDROID_SDK_ROOT` / `PATH`。
+  `flutter build apk --debug` 已验证通过，产物 `build/app/outputs/flutter-apk/app-debug.apk`。
+- **内存坑（踩过一次，别再踩）**：本机 7.8G 内存、**无 swap**，而 Flutter 模板的
+  `android/gradle.properties` 默认 `org.gradle.jvmargs=-Xmx8G`，首次构建会把 Gradle
+  daemon OOM 掉（daemon 日志静默截断、无报错，容易误判成卡死）。**不要改仓库里那个值**
+  （CI 需要），用环境变量覆盖：
+  `GRADLE_OPTS='-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ReservedCodeCacheSize=256m'`；
+  另在 `~/.gradle/gradle.properties` 加 `kotlin.daemon.jvmargs=-Xmx1280m -XX:MaxMetaspaceSize=512m`
+  限制 Kotlin 编译 daemon。后台跑构建要 `setsid nohup … &`，否则会话结束时整组进程被清理。
+- **仍然做不到的**：无 `/dev/kvm` → 跑不了 Android 模拟器；无真机连接 → 无法 `flutter run`
+  到 Android 设备；无 Chrome → web 目标不可用。也**没有真实后端**：M1–M4 的验证是
+  `flutter analyze` + `flutter test`（MockClient 假后端）+ 对照 EhBot 源码核对响应字段，
+  端到端待运营者用自己的部署试跑。
 - 依赖：`http`、`flutter_secure_storage`、`shared_preferences`、`path_provider`。
 - 写文件用 UTF-8、LF；改含中文的源文件优先用脚本（`io.open(..., encoding="utf-8",
   newline="\n")`），避免 shell 重定向把编码搞坏。
