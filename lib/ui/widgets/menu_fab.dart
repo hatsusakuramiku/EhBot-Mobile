@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme.dart';
 
 /// 详情页底部 sticky 操作条：**主操作永远在拇指区**，**危险按钮绝对不放这里**。
@@ -25,9 +26,7 @@ class MenuFab extends StatelessWidget {
         padding: const EdgeInsets.all(EhSpacing.m),
         decoration: BoxDecoration(
           color: cs.surface,
-          border: Border(
-            top: BorderSide(color: cs.outlineVariant, width: 0.5),
-          ),
+          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
         ),
         child: Row(
           children: <Widget>[

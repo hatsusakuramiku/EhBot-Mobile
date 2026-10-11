@@ -619,6 +619,111 @@ class ClientMeta {
 
 // ------------------------------------------------------------------ 解析助手
 
+// ------------------------------------------------------------ M8 模型
+
+/// `POST /api/v1/candidates/manual` 的结果。
+///
+/// 命中重复时后端回 `existing_candidate_id`，页面据此给「查看已有候选」按钮。
+class ManualAddResult {
+  const ManualAddResult({
+    this.candidateId,
+    this.existingCandidateId,
+    this.message = '',
+  });
+
+  factory ManualAddResult.fromJson(Map<String, dynamic> json) =>
+      ManualAddResult(
+        candidateId: _nullableString(json['candidate_id']),
+        existingCandidateId: _nullableString(json['existing_candidate_id']),
+        message: asString(json['message']),
+      );
+
+  final String? candidateId;
+  final String? existingCandidateId;
+  final String message;
+
+  bool get isDuplicate => existingCandidateId != null;
+}
+
+/// 去重计划里的一件作品。
+class DedupEntry {
+  const DedupEntry({
+    required this.candidateId,
+    this.title = '',
+    this.status = const StatusView(code: '', label: ''),
+    this.packLabel = '',
+    this.pageCount,
+    this.reason = '',
+  });
+
+  factory DedupEntry.fromJson(Map<String, dynamic> json) => DedupEntry(
+    candidateId: asString(json['candidate_id']),
+    title: asString(json['title']),
+    status: StatusView.fromJson(json['status']),
+    packLabel: asString(json['pack_label']),
+    pageCount: json['page_count'] is num
+        ? (json['page_count'] as num).toInt()
+        : null,
+    reason: asString(json['reason']),
+  );
+
+  final String candidateId;
+  final String title;
+  final StatusView status;
+  final String packLabel;
+  final int? pageCount;
+  final String reason;
+
+  String get displayTitle => title.isEmpty ? '作品 #$candidateId' : title;
+}
+
+/// 一个重复画廊分组：保留一件、移除其余。
+class DedupGroup {
+  const DedupGroup({
+    required this.exGid,
+    required this.keep,
+    this.remove = const <DedupEntry>[],
+  });
+
+  factory DedupGroup.fromJson(Map<String, dynamic> json) => DedupGroup(
+    exGid: asString(json['ex_gid']),
+    keep: DedupEntry.fromJson(asMap(json['keep']) ?? const <String, dynamic>{}),
+    remove: asMapList(json['remove']).map(DedupEntry.fromJson).toList(),
+  );
+
+  final String exGid;
+  final DedupEntry keep;
+  final List<DedupEntry> remove;
+}
+
+/// `GET /api/v1/dedup/plan`。
+class DedupPlan {
+  const DedupPlan({this.groups = const <DedupGroup>[], this.removable = 0});
+
+  factory DedupPlan.fromJson(Map<String, dynamic> json) => DedupPlan(
+    groups: asMapList(json['groups']).map(DedupGroup.fromJson).toList(),
+    removable: asInt(json['removable']),
+  );
+
+  final List<DedupGroup> groups;
+  final int removable;
+
+  bool get isEmpty => groups.isEmpty;
+}
+
+/// `POST /api/v1/dedup`。
+class DedupResult {
+  const DedupResult({this.removed = 0, this.message = ''});
+
+  factory DedupResult.fromJson(Map<String, dynamic> json) => DedupResult(
+    removed: asInt(json['removed']),
+    message: asString(json['message']),
+  );
+
+  final int removed;
+  final String message;
+}
+
 String asString(Object? value, [String fallback = '']) =>
     value is String ? value : (value == null ? fallback : '$value');
 

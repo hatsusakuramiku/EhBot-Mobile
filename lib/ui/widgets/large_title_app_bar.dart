@@ -32,10 +32,7 @@ class EhLargeTitleAppBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(title),
-              Text(
-                subtitle!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
     pinned: pinned,

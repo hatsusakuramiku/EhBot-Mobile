@@ -118,3 +118,41 @@
 - `openapi.json` 由 FastAPI 默认暴露（`/openapi.json`），作为契约快照校对；
   本仓库不生成客户端代码（手写 model，保持薄）。
 - 若将来做 Flutter Web 构建，需要后端加 CORS 与 cookie/CSRF 策略——当前**不做**。
+
+## 7. M8 端点快照（EhBot 仓库 `B-M8` 期新增；本仓库按 404 降级消费）
+
+> 本节是 M8 复刻 WEBUI 功能所需的端点清单。**后端尚未实现**——本仓库不等待，
+> 客户端按「端点存在则启用、404 则降级提示」两态处理。后端实现后本节升级为事实契约。
+>
+> 全部走 Bearer；`POST .../verify` 这类运行时检查不写 CSRF；列表与错误沿用 §1 信封。
+
+| 模块 | 方法 | 路径 | 用途 |
+|------|------|------|------|
+| manual_add | POST | `/api/v1/candidates/manual` | `{url}`；返回新候选或 `{existing_candidate_id}` |
+| dedup | GET | `/api/v1/dedup/plan` | 每个重复组的「保留 / 移除」判定（只读） |
+| dedup | POST | `/api/v1/dedup` | `{apply:true}` 执行去重 |
+| logs | GET | `/api/v1/logs?level=&limit=` | 历史日志（级别为展示下限） |
+| logs | GET | `/api/v1/logs/stream` | 实时日志（SSE，与 `/events` 平行） |
+| connections | GET/PUT | `/api/v1/settings/connections` | Telegram Bot / TG 用户 / ExHentai 状态与保存 |
+| sources | GET/POST/PATCH/DELETE | `/api/v1/settings/sources` + `/{id}` | 监听来源白名单 + 过滤规则 |
+| sources | POST | `/api/v1/settings/sources/dialogs` | 用 TG 用户账户读会话列表 |
+| parse | GET/PUT | `/api/v1/settings/parse` | 消息解析规则 + AI 候选判定 |
+| auto-approval | GET/POST/PATCH/DELETE | `/api/v1/settings/auto-approval/rules` + `/{id}` | 自动审批规则 CRUD |
+| auto-approval | POST | `/api/v1/settings/auto-approval/rules/{id}/dry-run` | 试跑：返回命中数与样例 id |
+| archive | GET/PUT | `/api/v1/settings/archive/{torrent,limits,profiles}` | qBittorrent / 自动打包 / 安全限制 / 工具 profile |
+| paths | GET/PUT/POST | `/api/v1/settings/paths/{template,rules,ai,preview}` | 路径模板 / 路径规则 / AI 模式 / 预览 |
+| paths | POST | `/api/v1/settings/paths/rearchive` | 一键重新归档（可选 `force`） |
+| ai | GET/POST/PATCH/DELETE | `/api/v1/settings/ai/{providers,models}` + `/{id}` | AI 供应商与模型 CRUD |
+| ai | GET/PUT | `/api/v1/settings/ai/chain` | 主力 + 备用模型链 |
+| ai | POST | `/api/v1/settings/ai/verify` | 测试模型连通性 |
+| passwords | GET/POST/DELETE | `/api/v1/settings/passwords` + `/{id}` | 归档密码条目（**永不回显明文**） |
+| api-key | GET/POST/DELETE | `/api/v1/settings/api-key` | 移动端 API Key 生成 / 查看标识 / 撤销 |
+| system | GET/PUT | `/api/v1/settings/system` | 运行参数 / 日志级别 / 时区 |
+
+补充：
+
+- **改管理员密码**（`change_password`）移动端**不实现**：那是浏览器会话路径的事，
+  Bearer 签发时已保证改过密码。
+- `passwords` / `api-key` / `connections` 三类**永不回显明文**：`GET` 只给标识、
+  状态与时间；`api-key` 明文只在生成响应里出现一次。
+- 404 处理：客户端把该模块标记为「后端未就绪」并在页面给出说明，不抛崩溃。

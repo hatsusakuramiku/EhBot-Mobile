@@ -94,14 +94,8 @@ class _SettingsPageState extends State<SettingsPage> {
             const SectionHeader(title: '服务器'),
             _card(<Widget>[
               _kv('Base URL', baseUrl.isEmpty ? '—' : baseUrl),
-              _kv(
-                '允许自签证书',
-                widget.state.settings.allowSelfSigned ? '是' : '否',
-              ),
-              _kv(
-                '允许明文 HTTP',
-                widget.state.settings.isCleartext ? '是' : '否',
-              ),
+              _kv('允许自签证书', widget.state.settings.allowSelfSigned ? '是' : '否'),
+              _kv('允许明文 HTTP', widget.state.settings.isCleartext ? '是' : '否'),
             ]),
             const SectionHeader(title: '外部服务'),
             _connections(),
@@ -161,10 +155,7 @@ class _SettingsPageState extends State<SettingsPage> {
             contentPadding: EdgeInsets.zero,
             title: const Text('无法加载连接状态'),
             subtitle: Text(_error!),
-            trailing: TextButton(
-              onPressed: _refresh,
-              child: const Text('重试'),
-            ),
+            trailing: TextButton(onPressed: _refresh, child: const Text('重试')),
           ),
         ),
       );
@@ -186,8 +177,7 @@ class _SettingsPageState extends State<SettingsPage> {
       child: EhCard(
         child: Column(
           children: <Widget>[
-            for (final MapEntry<String, ConnectionInfo> entry
-                in conns.entries)
+            for (final MapEntry<String, ConnectionInfo> entry in conns.entries)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(

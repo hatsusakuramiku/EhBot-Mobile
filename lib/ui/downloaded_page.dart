@@ -121,10 +121,7 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
     onRefresh: _reload,
     child: CustomScrollView(
       slivers: <Widget>[
-        EhLargeTitleAppBar(
-          title: '已下载',
-          actions: widget.appBarActions,
-        ),
+        EhLargeTitleAppBar(title: '已下载', actions: widget.appBarActions),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -253,7 +250,8 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
             ToneChip.status(status: work.state),
-            if (work.packLabel.isNotEmpty) ToneChip(label: work.packLabel, tone: 'success'),
+            if (work.packLabel.isNotEmpty)
+              ToneChip(label: work.packLabel, tone: 'success'),
             if (work.providerLabel.isNotEmpty)
               Text(
                 work.providerLabel,

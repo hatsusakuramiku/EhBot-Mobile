@@ -259,3 +259,35 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 144 / 0 failed（140 + 4）。
 - 文档：`AgentHelp/PHASES.md`（M8-A 状态）。
 - 状态：**已落地并提交**；下一步 M8-B（后端契约文档）。
+
+## M8-B · 2026-10-11 · 后端契约快照（文档）
+
+- 文档：`AgentHelp/CONTRACT.md` 新增 §7「M8 端点快照」——列出 manual_add / dedup / logs /
+  connections / sources / parse / auto-approval / archive / paths / ai / passwords / api-key /
+  system 共 20 行端点，标注「后端尚未实现，客户端按 404 降级消费」。
+- 明确：改管理员密码移动端不实现；passwords / api-key / connections 永不回显明文；
+  404 时页面给「后端未就绪」说明而不崩。
+- 验证：纯文档；`flutter analyze` / `flutter test` 不受影响。
+
+## M8-C · 2026-10-11 · Manual Add + Dedup（基线 144 → 150）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`150 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：`B-M8`（未实现）；客户端在 404 时显示「后端未就绪」提示。
+- 改动：
+  - `lib/api/models.dart`：新增 `ManualAddResult` / `DedupEntry` / `DedupGroup` /
+    `DedupPlan` / `DedupResult`。
+  - `lib/api/ehbot_api.dart`：新增 `manualAdd()` / `dedupPlan()` / `dedupApply()`。
+  - `lib/ui/error_text.dart`：新增 `isEndpointMissing()` 与 `kEndpointMissingHint`。
+  - `lib/ui/widgets/error_view.dart`：404 时显示「后端未就绪」而不是裸错误码。
+  - `lib/ui/manual_add_page.dart`（新增）：粘贴链接 → 解析入队；重复链接给「查看已有候选」；
+    表格输入键 `manual-url` / `manual-submit` / `manual-open-existing`。
+  - `lib/ui/dedup_page.dart`（新增）：先看计划（保留/移除 + 原因）再确认执行；键 `dedup-apply`。
+  - `lib/ui/dashboard_page.dart`：新增「快捷操作」区（手动添加 / 一键去重），放在页面末尾
+    （**放前面会把 M6 的需干预行挤出测试视口**，见下）。
+  - `test/ui/manual_add_page_test.dart`（3 条）、`test/ui/dedup_page_test.dart`（3 条）。
+- 验证：`flutter analyze` 零告警；`flutter test` → 150 / 0 failed（144 + 6）。
+  - 途中修复：工作台改用 `SliverToBoxAdapter + Column`（`SliverList` 懒构建会让下方
+    `需干预（1）` 不被构建，M6 断言失败）；「快捷操作」置于页尾以保持需干预行位置。
+- 文档：`AgentHelp/PHASES.md`（M8-B / M8-C 状态）。
+- 状态：**已落地并提交**；下一步 M8-D（日志实时流）。

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme.dart';
 import '../../media/thumbnail_loader.dart';
 import 'thumbnail_image.dart';
@@ -40,7 +41,7 @@ class CoverThumb extends StatelessWidget {
   }
 
   Widget _placeholder(ColorScheme cs) => ColoredBox(
-        color: cs.surfaceContainerHighest,
-        child: Icon(Icons.image_outlined, color: cs.onSurfaceVariant, size: 24),
-      );
+    color: cs.surfaceContainerHighest,
+    child: Icon(Icons.image_outlined, color: cs.onSurfaceVariant, size: 24),
+  );
 }

@@ -94,6 +94,28 @@ class EhBotApi {
   Future<ClientMeta> meta() async =>
       ClientMeta.fromJson(_ok(await client.get('/api/v1/meta')));
 
+  /// 手动添加任务（粘贴链接）。后端未实现时抛 404 的 `ApiException`。
+  Future<ManualAddResult> manualAdd(String url) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/candidates/manual',
+      body: <String, Object?>{'url': url},
+    );
+    return ManualAddResult.fromJson(_ok(response));
+  }
+
+  /// 一键去重的计划（只读）。
+  Future<DedupPlan> dedupPlan() async =>
+      DedupPlan.fromJson(_ok(await client.get('/api/v1/dedup/plan')));
+
+  /// 执行去重。
+  Future<DedupResult> dedupApply({bool apply = true}) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/dedup',
+      body: <String, Object?>{'apply': apply},
+    );
+    return DedupResult.fromJson(_ok(response));
+  }
+
   Map<String, dynamic> _ok(http.Response response) =>
       decodeJsonObject(ensureSuccess(response));
 

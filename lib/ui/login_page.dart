@@ -145,8 +145,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Text(
           text,
           style: TextStyle(
-            color:
-                isError ? cs.onErrorContainer : cs.onSecondaryContainer,
+            color: isError ? cs.onErrorContainer : cs.onSecondaryContainer,
           ),
         ),
       ),

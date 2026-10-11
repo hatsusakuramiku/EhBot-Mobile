@@ -94,21 +94,11 @@ class ServersPage extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             key: ValueKey<String>('server-menu-${profile.id}'),
-            onSelected: (String value) =>
-                _onMenu(context, profile, value),
+            onSelected: (String value) => _onMenu(context, profile, value),
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'edit',
-                child: Text('编辑'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'rename',
-                child: Text('重命名'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'delete',
-                child: Text('删除'),
-              ),
+              const PopupMenuItem<String>(value: 'edit', child: Text('编辑')),
+              const PopupMenuItem<String>(value: 'rename', child: Text('重命名')),
+              const PopupMenuItem<String>(value: 'delete', child: Text('删除')),
             ],
           ),
         ],
@@ -125,10 +115,8 @@ class ServersPage extends StatelessWidget {
       case 'edit':
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (BuildContext _) => ServerSetupPage(
-              state: state,
-              editingId: profile.id,
-            ),
+            builder: (BuildContext _) =>
+                ServerSetupPage(state: state, editingId: profile.id),
           ),
         );
       case 'rename':
@@ -144,12 +132,10 @@ class ServersPage extends StatelessWidget {
     }
   }
 
-  Future<String?> _promptRename(
-    BuildContext context,
-    ServerProfile profile,
-  ) {
-    final TextEditingController controller =
-        TextEditingController(text: profile.label);
+  Future<String?> _promptRename(BuildContext context, ServerProfile profile) {
+    final TextEditingController controller = TextEditingController(
+      text: profile.label,
+    );
     return showDialog<String>(
       context: context,
       builder: (BuildContext c) => AlertDialog(
@@ -174,24 +160,22 @@ class ServersPage extends StatelessWidget {
     );
   }
 
-  Future<bool?> _confirmDelete(
-    BuildContext context,
-    ServerProfile profile,
-  ) => showDialog<bool>(
-    context: context,
-    builder: (BuildContext c) => AlertDialog(
-      title: const Text('删除服务器'),
-      content: Text('确定删除「${profile.effectiveLabel}」？该服务器上的登录状态会一并清除。'),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(c).pop(false),
-          child: const Text('取消'),
+  Future<bool?> _confirmDelete(BuildContext context, ServerProfile profile) =>
+      showDialog<bool>(
+        context: context,
+        builder: (BuildContext c) => AlertDialog(
+          title: const Text('删除服务器'),
+          content: Text('确定删除「${profile.effectiveLabel}」？该服务器上的登录状态会一并清除。'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(c).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(c).pop(true),
+              child: const Text('删除'),
+            ),
+          ],
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(c).pop(true),
-          child: const Text('删除'),
-        ),
-      ],
-    ),
-  );
+      );
 }

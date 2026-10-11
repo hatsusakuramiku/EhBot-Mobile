@@ -12,6 +12,9 @@ class ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
+    final String message = isEndpointMissing(error)
+        ? kEndpointMissingHint
+        : describeError(error);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -20,7 +23,7 @@ class ErrorView extends StatelessWidget {
           children: <Widget>[
             Icon(Icons.error_outline, color: colors.error, size: 40),
             const SizedBox(height: 12),
-            Text(describeError(error), textAlign: TextAlign.center),
+            Text(message, textAlign: TextAlign.center),
             if (onRetry != null) ...<Widget>[
               const SizedBox(height: 16),
               FilledButton.tonal(onPressed: onRetry, child: const Text('重试')),

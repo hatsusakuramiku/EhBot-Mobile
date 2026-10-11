@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme.dart';
 
 /// M3 `SearchBar` 包装：固定 hint、可控 controller、空 / 非空态。

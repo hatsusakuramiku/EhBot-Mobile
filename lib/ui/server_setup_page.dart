@@ -134,11 +134,7 @@ class _ServerSetupPageState extends State<ServerSetupPage> {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.isNew ? '添加服务器' : '连接服务器',
-        ),
-      ),
+      appBar: AppBar(title: Text(widget.isNew ? '添加服务器' : '连接服务器')),
       body: ListView(
         padding: const EdgeInsets.all(EhSpacing.l),
         children: <Widget>[

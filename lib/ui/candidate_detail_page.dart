@@ -189,12 +189,15 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
     final List<String> tags = detail.tags.isNotEmpty
         ? detail.tags
         : widget.candidate.tags;
-    final String artist =
-        detail.artist.isNotEmpty ? detail.artist : widget.candidate.artist;
-    final String category =
-        detail.category.isNotEmpty ? detail.category : widget.candidate.category;
-    final String language =
-        detail.language.isNotEmpty ? detail.language : widget.candidate.language;
+    final String artist = detail.artist.isNotEmpty
+        ? detail.artist
+        : widget.candidate.artist;
+    final String category = detail.category.isNotEmpty
+        ? detail.category
+        : widget.candidate.category;
+    final String language = detail.language.isNotEmpty
+        ? detail.language
+        : widget.candidate.language;
     return EhCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,10 +290,7 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
       children: <Widget>[
         SizedBox(
           width: 96,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
         ),
         Expanded(
           child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
@@ -328,12 +328,7 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
     ];
     final List<Widget> danger = <Widget>[
       _actionButton(detail, 'delete', label: '彻底删除', confirm: true),
-      _actionButton(
-        detail,
-        'delete_files',
-        label: '彻底删除并删文件',
-        confirm: true,
-      ),
+      _actionButton(detail, 'delete_files', label: '彻底删除并删文件', confirm: true),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

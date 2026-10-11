@@ -22,8 +22,10 @@ abstract final class EhRadius {
 abstract final class EhAnim {
   /// 100 ms 左右（按钮按下 / chip 切换）。
   static const Duration fast = Duration(milliseconds: 150);
+
   /// 250 ms（sheet / 切页）。
   static const Duration medium = Duration(milliseconds: 250);
+
   /// 350 ms（大块入出场 / 数字滚动）。
   static const Duration slow = Duration(milliseconds: 350);
 }
@@ -31,8 +33,10 @@ abstract final class EhAnim {
 abstract final class EhBreakpoints {
   /// < 600 sp：手机竖屏（默认）。
   static const double compact = 600;
+
   /// 600–840 sp：大手机横 / 平板。
   static const double medium = 840;
+
   /// ≥ 840 sp：平板横 / 桌面。
   static const double expanded = 1200;
 }
@@ -180,22 +184,81 @@ class AppTheme {
   static TextTheme _buildTextTheme(ColorScheme cs) {
     final Color onSurface = cs.onSurface;
     return TextTheme(
-      displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w400, color: onSurface),
-      displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w400, color: onSurface),
-      displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w400, color: onSurface),
-      headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w400, color: onSurface),
-      headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w400, color: onSurface),
-      headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w400, color: onSurface),
-      titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w500, color: onSurface),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: onSurface),
-      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: onSurface),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: onSurface),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: onSurface),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface),
-      labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: onSurface),
-      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: onSurface),
+      displayLarge: TextStyle(
+        fontSize: 57,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      displayMedium: TextStyle(
+        fontSize: 45,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      displaySmall: TextStyle(
+        fontSize: 36,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      headlineLarge: TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: onSurface,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: onSurface,
+      ),
     );
   }
-
 }

@@ -87,9 +87,7 @@ class ServerStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       storageKey,
-      jsonEncode(
-        profiles.map((ServerProfile p) => p.toJson()).toList(),
-      ),
+      jsonEncode(profiles.map((ServerProfile p) => p.toJson()).toList()),
     );
   }
 

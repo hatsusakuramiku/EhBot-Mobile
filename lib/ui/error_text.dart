@@ -3,6 +3,14 @@ import '../api/auth_session.dart';
 
 const String _invalidApiKey = 'API Key 无效或已在网页端刷新，请重新粘贴。';
 
+/// 该模块的后端端点还没上线（404）。M8 期间用来把页面切成「后端未就绪」态。
+bool isEndpointMissing(Object error) =>
+    error is ApiException && error.statusCode == 404;
+
+/// 「后端未就绪」的说明文案。
+const String kEndpointMissingHint =
+    '后端还没有这一步（需要 EhBot 仓库的 B-M8 期）。当前调用会返回 404。';
+
 /// 把异常翻成给运营者看的中文提示（不包含 token / 密钥）。
 String describeError(Object error, {CredentialKind? kind}) {
   if (error is! ApiException) {

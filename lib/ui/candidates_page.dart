@@ -177,16 +177,11 @@ class _CandidatesPageState extends State<CandidatesPage> {
     onRefresh: _reload,
     child: CustomScrollView(
       slivers: <Widget>[
-        EhLargeTitleAppBar(
-          title: '候选',
-          actions: widget.appBarActions,
-        ),
+        EhLargeTitleAppBar(title: '候选', actions: widget.appBarActions),
         SliverToBoxAdapter(child: _filterBar(context)),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          sliver: SliverToBoxAdapter(
-            child: Text('共 $_total 个'),
-          ),
+          sliver: SliverToBoxAdapter(child: Text('共 $_total 个')),
         ),
         ..._contentSlivers(),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -195,51 +190,50 @@ class _CandidatesPageState extends State<CandidatesPage> {
   );
 
   Widget _filterBar(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: <Widget>[
-                for (final MapEntry<String, String> tab
-                    in kCandidateTabs.entries)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      right: tab.key == kCandidateTabs.keys.last ? 0 : 8,
-                    ),
-                    child: ChoiceChip(
-                      key: ValueKey<String>('candidate-tab-${tab.key}'),
-                      label: Text(
-                        _tabCounts[tab.key] == null
-                            ? tab.value
-                            : '${tab.value} ${_tabCounts[tab.key]}',
-                      ),
-                      selected: _tab == tab.key,
-                      onSelected: (bool _) => _selectTab(tab.key),
-                    ),
+    padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: <Widget>[
+              for (final MapEntry<String, String> tab in kCandidateTabs.entries)
+                Padding(
+                  padding: EdgeInsets.only(
+                    right: tab.key == kCandidateTabs.keys.last ? 0 : 8,
                   ),
-              ],
-            ),
+                  child: ChoiceChip(
+                    key: ValueKey<String>('candidate-tab-${tab.key}'),
+                    label: Text(
+                      _tabCounts[tab.key] == null
+                          ? tab.value
+                          : '${tab.value} ${_tabCounts[tab.key]}',
+                    ),
+                    selected: _tab == tab.key,
+                    onSelected: (bool _) => _selectTab(tab.key),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: EhSearchBar(
-              key: const ValueKey<String>('candidate-search'),
-              controller: _searchController,
-              hint: '搜索标题 / 作者',
-              onSubmitted: (String value) {
-                _search = value;
-                unawaited(_reload());
-              },
-            ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: EhSearchBar(
+            key: const ValueKey<String>('candidate-search'),
+            controller: _searchController,
+            hint: '搜索标题 / 作者',
+            onSubmitted: (String value) {
+              _search = value;
+              unawaited(_reload());
+            },
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
 
   List<Widget> _contentSlivers() {
     if (_error != null) {
@@ -283,9 +277,8 @@ class _CandidatesPageState extends State<CandidatesPage> {
               mainAxisExtent: 160,
             ),
             itemCount: _items.length,
-            itemBuilder: (BuildContext context, int index) => RepaintBoundary(
-              child: _candidateCard(_items[index]),
-            ),
+            itemBuilder: (BuildContext context, int index) =>
+                RepaintBoundary(child: _candidateCard(_items[index])),
           ),
         ),
         if (_page < _pages) _loadMoreSliver(),
@@ -372,10 +365,7 @@ class _CandidatesPageState extends State<CandidatesPage> {
                   children: <Widget>[
                     ToneChip.status(status: candidate.status),
                     for (final String tag in candidate.tags.take(2))
-                      Text(
-                        tag,
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
+                      Text(tag, style: Theme.of(context).textTheme.labelSmall),
                   ],
                 ),
               ],

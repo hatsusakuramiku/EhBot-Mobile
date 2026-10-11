@@ -123,10 +123,7 @@ class AppState extends ChangeNotifier {
   }
 
   /// 更新（或新建）当前档案的服务器设置。
-  Future<void> _upsertActiveProfile(
-    AppSettings next, {
-    String? label,
-  }) async {
+  Future<void> _upsertActiveProfile(AppSettings next, {String? label}) async {
     final ServerProfile? current = activeServer;
     final ServerProfile updated;
     if (current == null) {
@@ -138,10 +135,7 @@ class AppState extends ChangeNotifier {
       servers = <ServerProfile>[...servers, updated];
       activeServerId = updated.id;
     } else {
-      updated = current.copyWith(
-        label: label ?? current.label,
-        settings: next,
-      );
+      updated = current.copyWith(label: label ?? current.label, settings: next);
       servers = <ServerProfile>[
         for (final ServerProfile p in servers)
           if (p.id == current.id) updated else p,
@@ -245,11 +239,8 @@ class AppState extends ChangeNotifier {
   }) async {
     final ServerProfile target = servers.firstWhere(
       (ServerProfile p) => p.id == id,
-      orElse: () => const ServerProfile(
-        id: '',
-        label: '',
-        settings: AppSettings(),
-      ),
+      orElse: () =>
+          const ServerProfile(id: '', label: '', settings: AppSettings()),
     );
     if (target.id.isEmpty) {
       return;
@@ -288,9 +279,7 @@ class AppState extends ChangeNotifier {
       activeServerId = servers.isEmpty ? null : servers.first.id;
       await serverStore.saveActiveId(activeServerId);
       settings = activeServer?.settings ?? const AppSettings();
-      _setStage(
-        settings.isConfigured ? AppStage.login : AppStage.serverSetup,
-      );
+      _setStage(settings.isConfigured ? AppStage.login : AppStage.serverSetup);
     } else {
       notifyListeners();
     }

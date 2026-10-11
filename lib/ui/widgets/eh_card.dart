@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../theme.dart';
 
 enum EhCardTone {
   /// 默认卡：surface + outline（不需色块）。
   neutral,
+
   /// 强调卡（启动告警）：errorContainer 背景。
   warning,
+
   /// 主操作：primaryContainer 背景。
   primary,
 }
@@ -49,8 +52,7 @@ class EhCard extends StatelessWidget {
         side: BorderSide(color: border.withValues(alpha: 0.4), width: 0.5),
       ),
       child: Padding(
-        padding: padding ??
-            EdgeInsets.all(dense ? EhSpacing.m : EhSpacing.l),
+        padding: padding ?? EdgeInsets.all(dense ? EhSpacing.m : EhSpacing.l),
         child: child,
       ),
     );

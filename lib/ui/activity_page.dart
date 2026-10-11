@@ -138,9 +138,7 @@ class _ActivityPageState extends State<ActivityPage> {
         ),
       for (final JobGroup group in groups) ...<Widget>[
         SliverToBoxAdapter(
-          child: SectionHeader(
-            title: '${group.label}（${group.count}）',
-          ),
+          child: SectionHeader(title: '${group.label}（${group.count}）'),
         ),
         SliverList.builder(
           itemCount: group.jobs.length,
@@ -148,9 +146,7 @@ class _ActivityPageState extends State<ActivityPage> {
               _jobTile(context, group.jobs[index]),
         ),
       ],
-      SliverToBoxAdapter(
-        child: SectionHeader(title: '历史（${history.length}）'),
-      ),
+      SliverToBoxAdapter(child: SectionHeader(title: '历史（${history.length}）')),
       if (history.isEmpty)
         const SliverToBoxAdapter(
           child: Padding(

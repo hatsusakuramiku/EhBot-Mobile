@@ -21,11 +21,7 @@ class ToneChip extends StatelessWidget {
 
   /// 直接用后端 `StatusView` 构造；空状态渲染成零尺寸。
   factory ToneChip.status({Key? key, required StatusView status}) =>
-      ToneChip(
-        key: key,
-        label: status.label,
-        tone: status.tone,
-      );
+      ToneChip(key: key, label: status.label, tone: status.tone);
 
   bool get _isEmpty => label.isEmpty && tone.isEmpty;
 
@@ -37,10 +33,7 @@ class ToneChip extends StatelessWidget {
     final Color bg = _bg(context);
     final Color fg = _fg(context);
     final Widget chip = Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: EhSpacing.m,
-        vertical: 3,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: EhSpacing.m, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),

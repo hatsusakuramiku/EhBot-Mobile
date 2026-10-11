@@ -23,20 +23,20 @@ class EhNavBar extends StatelessWidget {
       height: 72,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      indicatorColor:
-          Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.6),
+      indicatorColor: Theme.of(context).colorScheme.secondaryContainer
+          .withValues(alpha: 0.6),
       elevation: 0,
       surfaceTintColor: Colors.transparent,
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (Set<WidgetState> states) {
-          final bool selected = states.contains(WidgetState.selected);
-          return Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: selected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-              );
-        },
-      ),
+      labelTextStyle: WidgetStateProperty.resolveWith((
+        Set<WidgetState> states,
+      ) {
+        final bool selected = states.contains(WidgetState.selected);
+        return Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: selected
+              ? Theme.of(context).colorScheme.onSurface
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        );
+      }),
     );
   }
 }
