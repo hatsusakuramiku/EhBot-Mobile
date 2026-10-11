@@ -7,21 +7,29 @@ import '../api/models.dart';
 import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
+import 'widgets/eh_card.dart';
+import 'widgets/empty_state.dart';
 import 'widgets/error_view.dart';
-import 'widgets/status_chip.dart';
+import 'widgets/large_title_app_bar.dart';
+import 'widgets/search_bar.dart';
+import 'widgets/tone_chip.dart';
 
-/// 已下载列表：搜索 + 加载更多。
+/// 已下载列表：大标题 + 搜索 + 加载更多。
 class DownloadedListPage extends StatefulWidget {
   const DownloadedListPage({
     super.key,
     required this.api,
     required this.thumbnails,
     this.monitor,
+    this.appBarActions = const <Widget>[],
   });
 
   final EhBotApi api;
   final ThumbnailLoader thumbnails;
   final LiveMonitor? monitor;
+
+  /// 顶栏动作（由 [HomeShell] 注入设置入口等）。
+  final List<Widget> appBarActions;
 
   @override
   State<DownloadedListPage> createState() => _DownloadedListPageState();
@@ -108,106 +116,132 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: <Widget>[
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: TextField(
-          key: const ValueKey<String>('downloaded-search'),
-          controller: _searchController,
-          textInputAction: TextInputAction.search,
-          decoration: const InputDecoration(
-            hintText: '搜索标题 / 作者 / 来源',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-            isDense: true,
+  Widget build(BuildContext context) => RefreshIndicator(
+    onRefresh: _reload,
+    child: CustomScrollView(
+      slivers: <Widget>[
+        EhLargeTitleAppBar(
+          title: '已下载',
+          actions: widget.appBarActions,
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                EhSearchBar(
+                  key: const ValueKey<String>('downloaded-search'),
+                  controller: _searchController,
+                  hint: '搜索标题 / 作者 / 来源',
+                  onSubmitted: (String value) {
+                    _search = value;
+                    unawaited(_reload());
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text('共 $_total 个'),
+              ],
+            ),
           ),
-          onSubmitted: (String value) {
-            _search = value;
-            unawaited(_reload());
-          },
         ),
-      ),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('共 $_total 个'),
-        ),
-      ),
-      Expanded(child: _buildList()),
-    ],
+        ..._contentSlivers(),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+      ],
+    ),
   );
 
-  Widget _buildList() {
+  List<Widget> _contentSlivers() {
     if (_error != null) {
-      return ErrorView(error: _error!, onRetry: _reload);
+      return <Widget>[
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: ErrorView(error: _error!, onRetry: _reload),
+        ),
+      ];
     }
     if (_items.isEmpty && _loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const <Widget>[
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
     }
     if (_items.isEmpty) {
-      return const Center(child: Text('没有已下载内容。'));
+      return const <Widget>[
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyState(
+            icon: Icons.inventory_2_outlined,
+            primary: '没有已下载内容',
+            secondary: '通过审核并完成打包的作品会出现在这里',
+          ),
+        ),
+      ];
     }
-    final bool hasMore = _hasMore;
-    return RefreshIndicator(
-      onRefresh: _reload,
-      child: ListView.builder(
-        itemCount: _items.length + (hasMore ? 1 : 0),
-        itemBuilder: (BuildContext context, int index) {
-          if (index >= _items.length) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: _loading
-                    ? const CircularProgressIndicator()
-                    : OutlinedButton(
-                        key: const ValueKey<String>('downloaded-load-more'),
-                        onPressed: _loadMore,
-                        child: const Text('加载更多'),
-                      ),
-              ),
-            );
-          }
-          return _tile(_items[index]);
-        },
+    return <Widget>[
+      SliverList.builder(
+        itemCount: _items.length,
+        itemBuilder: (BuildContext context, int index) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: _tile(_items[index]),
+        ),
       ),
-    );
+      if (_hasMore)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : OutlinedButton(
+                      key: const ValueKey<String>('downloaded-load-more'),
+                      onPressed: _loadMore,
+                      child: const Text('加载更多'),
+                    ),
+            ),
+          ),
+        ),
+    ];
   }
 
-  Widget _tile(DownloadedWork work) {
-    return ListTile(
-      key: ValueKey<String>('downloaded-${work.candidateId}'),
-      onTap: () => unawaited(_openDetail(work)),
-      title: Text(
-        work.displayTitle,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (work.artist.isNotEmpty) Text(work.artist),
+  Widget _tile(DownloadedWork work) => EhCard(
+    key: ValueKey<String>('downloaded-${work.candidateId}'),
+    dense: true,
+    onTap: () => unawaited(_openDetail(work)),
+    semanticsLabel: work.displayTitle,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          work.displayTitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        if (work.artist.isNotEmpty) ...<Widget>[
           const SizedBox(height: 4),
-          Row(
-            children: <Widget>[
-              StatusChip(status: work.state),
-              if (work.packLabel.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(work.packLabel),
-                ),
-              if (work.providerLabel.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(work.providerLabel),
-                ),
-            ],
-          ),
+          Text(work.artist, style: Theme.of(context).textTheme.bodySmall),
         ],
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            ToneChip.status(status: work.state),
+            if (work.packLabel.isNotEmpty) ToneChip(label: work.packLabel, tone: 'success'),
+            if (work.providerLabel.isNotEmpty)
+              Text(
+                work.providerLabel,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
 
   Future<void> _openDetail(DownloadedWork work) async {
     final Candidate stub = Candidate(

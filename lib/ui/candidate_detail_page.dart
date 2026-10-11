@@ -7,14 +7,17 @@ import '../api/models.dart';
 import '../media/thumbnail_loader.dart';
 import 'error_text.dart';
 import 'widgets/async_view.dart';
-import 'widgets/status_chip.dart';
-import 'widgets/thumbnail_image.dart';
+import 'widgets/cover_thumb.dart';
+import 'widgets/eh_card.dart';
+import 'widgets/large_title_app_bar.dart';
+import 'widgets/section_header.dart';
+import 'widgets/tag_chip.dart';
+import 'widgets/tone_chip.dart';
 
-/// 详情页：先封面 + 元数据 + 时间线 + 通过 / 驳回 + M6 新增的重获 / 重打 / 重转 / 切源 / 重排队 / 删除。
+/// 作品详情：封面 + 元数据 + 时间线 + 主/次/危险三层操作。
 ///
-/// 后端返回的 `actions` 字段控制哪些按钮可见；缺字段则不显示（不是禁用）。
-///
-/// 前后寲选项仅在后端返回 `prev_id` / `next_id`时出现；点击后 push 同一个页面但换 candidateId。
+/// 后端返回的 `actions` 控制哪些按钮可见；缺字段则不显示（不是禁用）。
+/// `prev_id` / `next_id` 存在时才出现前后导航。
 class CandidateDetailPage extends StatefulWidget {
   const CandidateDetailPage({
     super.key,
@@ -123,11 +126,257 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: AsyncView<WorkDetail>(
+      future: _future,
+      onRetry: _reload,
+      builder: (BuildContext context, WorkDetail detail) => CustomScrollView(
+        slivers: <Widget>[
+          EhLargeTitleAppBar(
+            title: widget.candidate.displayTitle,
+            subtitle: detail.stage.label.isEmpty ? null : detail.stage.label,
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            sliver: SliverList.list(
+              children: <Widget>[
+                _overview(context, detail),
+                if (detail.filterReason.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  EhCard(
+                    tone: EhCardTone.warning,
+                    dense: true,
+                    child: Text('过滤说明：${detail.filterReason}'),
+                  ),
+                ],
+                if (detail.cbzPath.isNotEmpty)
+                  _kv(context, '归档路径', detail.cbzPath),
+                if (detail.metadata.isNotEmpty) ...<Widget>[
+                  const SectionHeader(title: '元数据'),
+                  for (final MetadataEntry entry in detail.metadata)
+                    _kv(
+                      context,
+                      entry.label,
+                      entry.value,
+                      trailing: entry.isLocked
+                          ? '已锁定'
+                          : (entry.isManual ? '手动' : null),
+                    ),
+                ],
+                if (detail.timeline.isNotEmpty) ...<Widget>[
+                  const SectionHeader(title: '时间线'),
+                  for (final TimelineEntry entry in detail.timeline)
+                    _kv(
+                      context,
+                      entry.label,
+                      entry.reason,
+                      trailing: _formatTime(entry.createdAt),
+                    ),
+                ],
+                const SizedBox(height: 20),
+                _actions(context, detail),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _overview(BuildContext context, WorkDetail detail) {
+    final CoverRef? cover = detail.cover ?? widget.candidate.cover;
+    final List<String> tags = detail.tags.isNotEmpty
+        ? detail.tags
+        : widget.candidate.tags;
+    final String artist =
+        detail.artist.isNotEmpty ? detail.artist : widget.candidate.artist;
+    final String category =
+        detail.category.isNotEmpty ? detail.category : widget.candidate.category;
+    final String language =
+        detail.language.isNotEmpty ? detail.language : widget.candidate.language;
+    return EhCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              CoverThumb(
+                loader: widget.thumbnails,
+                hash: cover?.hash,
+                width: 96,
+                height: 128,
+                radius: BorderRadius.circular(12),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      detail.displayTitle,
+                      key: const ValueKey<String>('detail-title'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        ToneChip.status(status: detail.status),
+                        ToneChip.status(status: detail.stage),
+                        if (artist.isNotEmpty) TagChip(label: artist),
+                        if (category.isNotEmpty) TagChip(label: category),
+                        if (language.isNotEmpty) TagChip(label: language),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (tags.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: <Widget>[
+                for (final String tag in tags) TagChip(label: tag),
+              ],
+            ),
+          ],
+          if (detail.prevId != null || detail.nextId != null) ...<Widget>[
+            const SizedBox(height: 12),
+            const Divider(),
+            Row(
+              children: <Widget>[
+                if (detail.prevId != null)
+                  TextButton.icon(
+                    key: const ValueKey<String>('detail-prev'),
+                    icon: const Icon(Icons.chevron_left),
+                    label: const Text('上一作品'),
+                    onPressed: () => _openSibling(detail.prevId),
+                  ),
+                const Spacer(),
+                if (detail.nextId != null)
+                  TextButton.icon(
+                    key: const ValueKey<String>('detail-next'),
+                    icon: const Icon(Icons.chevron_right),
+                    label: const Text('下一作品'),
+                    onPressed: () => _openSibling(detail.nextId),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _kv(
+    BuildContext context,
+    String label,
+    String value, {
+    String? trailing,
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          width: 96,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        Expanded(
+          child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+        if (trailing != null)
+          Text(trailing, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    ),
+  );
+
+  Widget _actions(BuildContext context, WorkDetail detail) {
+    final List<Widget> primary = <Widget>[
+      if (widget.candidate.canApprove)
+        FilledButton(
+          key: const ValueKey<String>('detail-approve'),
+          onPressed: _busy ? null : () => _review('approve'),
+          child: const Text('通过'),
+        ),
+      if (widget.candidate.canReject)
+        OutlinedButton(
+          key: const ValueKey<String>('detail-reject'),
+          onPressed: _busy ? null : () => _review('reject'),
+          child: const Text('驳回'),
+        ),
+    ];
+    final List<Widget> secondary = <Widget>[
+      _actionButton(detail, 'fetch_metadata', label: '重获元数据'),
+      _actionButton(detail, 'repack', label: '重新打包'),
+      _actionButton(detail, 'reconvert', label: '重新转换'),
+      _actionButton(detail, 'switch_source_ehentai', label: '切至 EH'),
+      _actionButton(detail, 'switch_source_telegram', label: '切至 Telegram'),
+      _actionButton(detail, 'requeue', label: '重排队'),
+      _actionButton(detail, 'needs_revision', label: '需修订'),
+      _actionButton(detail, 'convert', label: '转换'),
+    ];
+    final List<Widget> danger = <Widget>[
+      _actionButton(detail, 'delete', label: '彻底删除', confirm: true),
+      _actionButton(
+        detail,
+        'delete_files',
+        label: '彻底删除并删文件',
+        confirm: true,
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (primary.isNotEmpty)
+          Wrap(spacing: 12, runSpacing: 8, children: primary),
+        if (secondary.any((Widget w) => w is! SizedBox))
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(spacing: 8, runSpacing: 8, children: secondary),
+          ),
+        if (danger.any((Widget w) => w is! SizedBox))
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: EhCard(
+              tone: EhCardTone.warning,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Icon(Icons.warning_amber_rounded, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        '危险操作',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, runSpacing: 8, children: danger),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _actionButton(
     WorkDetail detail,
     String name, {
     required String label,
-    bool filled = false,
     bool confirm = false,
   }) {
     if (!detail.can(name)) {
@@ -142,185 +391,10 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
               unawaited(_jobAction(name));
             }
           };
-    return Padding(
-      padding: const EdgeInsets.only(right: 8, bottom: 8),
-      child: filled
-          ? FilledButton(
-              key: ValueKey<String>('detail-action-$name'),
-              onPressed: onPressed,
-              child: Text(label),
-            )
-          : OutlinedButton(
-              key: ValueKey<String>('detail-action-$name'),
-              onPressed: onPressed,
-              child: Text(label),
-            ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final CoverRef? cover = widget.candidate.cover;
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.candidate.displayTitle)),
-      body: AsyncView<WorkDetail>(
-        future: _future,
-        onRetry: _reload,
-        builder: (BuildContext context, WorkDetail detail) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (cover != null)
-                  SizedBox(
-                    width: 96,
-                    height: 128,
-                    child: ThumbnailImage(
-                      loader: widget.thumbnails,
-                      hash: cover.hash,
-                    ),
-                  ),
-                if (cover != null) const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        detail.displayTitle,
-                        key: const ValueKey<String>('detail-title'),
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: <Widget>[
-                          StatusChip(status: detail.status),
-                          StatusChip(status: detail.stage),
-                          if (detail.artist.isNotEmpty)
-                            Chip(label: Text(detail.artist)),
-                          if (detail.category.isNotEmpty)
-                            Chip(label: Text(detail.category)),
-                          if (detail.language.isNotEmpty)
-                            Chip(label: Text(detail.language)),
-                        ],
-                      ),
-                      if (detail.tags.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 8),
-                        Text(detail.tags.join(' · ')),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (detail.prevId != null || detail.nextId != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  if (detail.prevId != null)
-                    TextButton.icon(
-                      key: const ValueKey<String>('detail-prev'),
-                      icon: const Icon(Icons.chevron_left),
-                      label: const Text('上一作品'),
-                      onPressed: () => _openSibling(detail.prevId),
-                    ),
-                  const Spacer(),
-                  if (detail.nextId != null)
-                    TextButton.icon(
-                      key: const ValueKey<String>('detail-next'),
-                      icon: const Icon(Icons.chevron_right),
-                      label: const Text('下一作品'),
-                      onPressed: () => _openSibling(detail.nextId),
-                    ),
-                ],
-              ),
-            ],
-            if (detail.filterReason.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 8),
-              Text('过滤说明：${detail.filterReason}'),
-            ],
-            if (detail.cbzPath.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 8),
-              Text('装成：${detail.cbzPath}'),
-            ],
-            if (detail.metadata.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 20),
-              Text('元数据', style: Theme.of(context).textTheme.titleMedium),
-              for (final MetadataEntry entry in detail.metadata)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.label),
-                  subtitle: Text(entry.value),
-                  trailing: entry.isManual || entry.isLocked
-                      ? Text(entry.isLocked ? '已锁定' : '手动')
-                      : null,
-                ),
-            ],
-            if (detail.timeline.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 20),
-              Text('时间线', style: Theme.of(context).textTheme.titleMedium),
-              for (final TimelineEntry entry in detail.timeline)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.label),
-                  subtitle: Text(entry.reason),
-                  trailing: Text(
-                    _formatTime(entry.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-            ],
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 0,
-              runSpacing: 0,
-              children: <Widget>[
-                if (widget.candidate.canApprove)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8, bottom: 8),
-                    child: FilledButton(
-                      key: const ValueKey<String>('detail-approve'),
-                      onPressed: _busy ? null : () => _review('approve'),
-                      child: const Text('通过'),
-                    ),
-                  ),
-                if (widget.candidate.canReject)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8, bottom: 8),
-                    child: OutlinedButton(
-                      key: const ValueKey<String>('detail-reject'),
-                      onPressed: _busy ? null : () => _review('reject'),
-                      child: const Text('驳回'),
-                    ),
-                  ),
-                _actionButton(detail, 'fetch_metadata', label: '重获元数据'),
-                _actionButton(detail, 'repack', label: '重新打包'),
-                _actionButton(detail, 'reconvert', label: '重新转换'),
-                _actionButton(detail, 'switch_source_ehentai', label: '切至 EH'),
-                _actionButton(
-                  detail,
-                  'switch_source_telegram',
-                  label: '切至 Telegram',
-                ),
-                _actionButton(detail, 'requeue', label: '重排队'),
-                _actionButton(detail, 'needs_revision', label: '需修订'),
-                _actionButton(detail, 'convert', label: '转换'),
-                _actionButton(detail, 'delete', label: '轻度删除', confirm: true),
-                _actionButton(
-                  detail,
-                  'delete_files',
-                  label: '底度删除',
-                  confirm: true,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return OutlinedButton(
+      key: ValueKey<String>('detail-action-$name'),
+      onPressed: onPressed,
+      child: Text(label),
     );
   }
 }

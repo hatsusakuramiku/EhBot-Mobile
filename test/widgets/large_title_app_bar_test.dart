@@ -14,6 +14,7 @@ void main() {
       ),
     ));
     expect(find.text('工作台'), findsWidgets);
-    expect(find.text('Hello'), findsOneWidget);
+    // `SliverAppBar.large` 折叠态与展开态各渲染一份标题/副标，故用 findsWidgets。
+    expect(find.text('Hello'), findsWidgets);
   });
 }

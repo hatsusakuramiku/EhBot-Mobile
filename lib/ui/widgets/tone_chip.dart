@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../../api/models.dart';
 import '../theme.dart';
 
-/// 渲染 `StatusView` 的统一 chip。颜色按 `StatusView.tone`（后端解析），
-/// 不再硬编码 `Colors.green.shade100` 等。文字大小自动按密度走。
+/// 状态徽标 / 标签的统一实现。
+///
+/// 颜色按 tone 走 M3 语义色，**不再硬编码** `Colors.green.shade100` 之类；
+/// 文案永远用后端 `StatusView.label`，不在客户端硬编码中文状态名。
 class ToneChip extends StatelessWidget {
   final String label;
   final String tone;
@@ -15,19 +19,31 @@ class ToneChip extends StatelessWidget {
     this.onTap,
   });
 
+  /// 直接用后端 `StatusView` 构造；空状态渲染成零尺寸。
+  factory ToneChip.status({Key? key, required StatusView status}) =>
+      ToneChip(
+        key: key,
+        label: status.label,
+        tone: status.tone,
+      );
+
+  bool get _isEmpty => label.isEmpty && tone.isEmpty;
+
   @override
   Widget build(BuildContext context) {
+    if (_isEmpty) {
+      return const SizedBox.shrink();
+    }
     final Color bg = _bg(context);
     final Color fg = _fg(context);
     final Widget chip = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: EhSpacing.m,
-        vertical: EhSpacing.xs,
+        vertical: 3,
       ),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(EhRadius.chip),
-        border: Border.all(color: fg.withValues(alpha: 0.2), width: 0.5),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
@@ -44,9 +60,11 @@ class ToneChip extends StatelessWidget {
   Color _bg(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     return switch (tone) {
-      'success' => cs.tertiaryContainer,
+      'success' => cs.primaryContainer,
       'danger' => cs.errorContainer,
-      'warning' => Colors.amber.shade100,
+      'warning' => cs.tertiaryContainer,
+      'active' => cs.tertiaryContainer,
+      'waiting' => cs.secondaryContainer,
       'info' => cs.primaryContainer,
       _ => cs.surfaceContainerHighest,
     };
@@ -55,9 +73,11 @@ class ToneChip extends StatelessWidget {
   Color _fg(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
     return switch (tone) {
-      'success' => cs.onTertiaryContainer,
+      'success' => cs.onPrimaryContainer,
       'danger' => cs.onErrorContainer,
-      'warning' => Colors.amber.shade900,
+      'warning' => cs.onTertiaryContainer,
+      'active' => cs.onTertiaryContainer,
+      'waiting' => cs.onSecondaryContainer,
       'info' => cs.onPrimaryContainer,
       _ => cs.onSurfaceVariant,
     };

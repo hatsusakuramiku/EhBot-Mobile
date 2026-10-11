@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
+import 'widgets/eh_card.dart';
+import 'widgets/empty_state.dart';
+import 'widgets/section_header.dart';
+import 'widgets/tone_chip.dart';
 
-/// 设置入口：只读展示当前会话状态。按 `MOBILE.md` §2.2，编辑功能不在 v0.1.0。
+/// 设置：分区呈现当前会话状态（M7 只读；M8-E 起接各编辑页）。
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.state});
 
@@ -27,20 +31,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _refresh() async {
     final EhBotApi? api = widget.state.api;
-    if (api == null) return;
+    if (api == null) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final Summary summary = await api.summary();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _summary = summary;
         _loading = false;
       });
     } on Object catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = error.toString();
         _loading = false;
@@ -50,7 +60,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
     final WhoAmI? who = widget.state.identity;
     final String baseUrl = widget.state.settings.baseUrl;
     final String credentialKind = widget.state.session?.kind.name ?? 'unknown';
@@ -68,103 +77,58 @@ class _SettingsPageState extends State<SettingsPage> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.only(bottom: 24),
           children: <Widget>[
-            _section(theme, '账号'),
-            _kv(theme, '用户名', who?.username ?? '—'),
-            _kv(theme, '凭据类型', credentialKind),
-            _kv(
-              theme,
-              '会话到期',
-              who?.expiresAt == null
-                  ? '永不过期'
-                  : who!.expiresAt!.toLocal().toString(),
-            ),
-            _kv(theme, '需改密', who?.mustChangePassword == true ? '是' : '否'),
-            const Divider(height: 32),
-            _section(theme, '服务器'),
-            _kv(theme, 'Base URL', baseUrl.isEmpty ? '—' : baseUrl),
-            _kv(
-              theme,
-              '允许自签证书',
-              widget.state.settings.allowSelfSigned ? '是' : '否',
-            ),
-            _kv(
-              theme,
-              '允许明文 HTTP',
-              widget.state.settings.isCleartext ? '是' : '否',
-            ),
-            const Divider(height: 32),
-            _section(theme, '外部服务'),
-            if (_loading && _summary == null)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_error != null)
-              ListTile(
-                title: const Text('无法加载连接状态'),
-                subtitle: Text(_error!),
-                trailing: TextButton(
-                  onPressed: _refresh,
-                  child: const Text('重试'),
-                ),
-              )
-            else if (_summary != null &&
-                _summary!.connections.isNotEmpty) ...<Widget>[
-              for (final MapEntry<String, ConnectionInfo> entry
-                  in _summary!.connections.entries)
-                _connectionTile(
-                  theme,
-                  entry.value.label.isEmpty ? entry.key : entry.value.label,
-                  entry.value,
-                ),
-            ] else
-              const ListTile(title: Text('无连接数据')),
+            const SectionHeader(title: '账号'),
+            _card(<Widget>[
+              _kv('用户名', who?.username ?? '—'),
+              _kv('凭据类型', credentialKind),
+              _kv(
+                '会话到期',
+                who?.expiresAt == null
+                    ? '永不过期'
+                    : who!.expiresAt!.toLocal().toString(),
+              ),
+              _kv('需改密', who?.mustChangePassword == true ? '是' : '否'),
+            ]),
+            const SectionHeader(title: '服务器'),
+            _card(<Widget>[
+              _kv('Base URL', baseUrl.isEmpty ? '—' : baseUrl),
+              _kv(
+                '允许自签证书',
+                widget.state.settings.allowSelfSigned ? '是' : '否',
+              ),
+              _kv(
+                '允许明文 HTTP',
+                widget.state.settings.isCleartext ? '是' : '否',
+              ),
+            ]),
+            const SectionHeader(title: '外部服务'),
+            _connections(),
             if (_summary != null &&
                 _summary!.startupErrors.isNotEmpty) ...<Widget>[
-              const Divider(height: 32),
-              _section(theme, '启动告警', tone: theme.colorScheme.error),
-              for (final String err in _summary!.startupErrors)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    err,
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
+              const SectionHeader(title: '启动告警'),
+              EhCard(
+                tone: EhCardTone.warning,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    for (final String err in _summary!.startupErrors)
+                      Text('· $err'),
+                  ],
                 ),
+              ),
             ],
-            const Divider(height: 32),
-            _section(theme, '会话'),
-            ListTile(
-              key: const ValueKey<String>('settings-logout'),
-              leading: const Icon(Icons.logout),
-              title: const Text('退出登录'),
-              onTap: () async {
-                final bool? ok = await showDialog<bool>(
-                  context: context,
-                  builder: (BuildContext c) => AlertDialog(
-                    title: const Text('确认退出'),
-                    content: const Text('退出后需要重新登录。'),
-                    actions: <Widget>[
-                      TextButton(
-                        onPressed: () => Navigator.of(c).pop(false),
-                        child: const Text('取消'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(c).pop(true),
-                        child: const Text('退出'),
-                      ),
-                    ],
-                  ),
-                );
-                if (ok == true && mounted) {
-                  await widget.state.logout();
-                }
-              },
+            const SectionHeader(title: '会话'),
+            EhCard(
+              child: ListTile(
+                key: const ValueKey<String>('settings-logout'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.logout),
+                title: const Text('退出登录'),
+                subtitle: const Text('退出后需要重新登录'),
+                onTap: _confirmLogout,
+              ),
             ),
           ],
         ),
@@ -172,58 +136,103 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _section(ThemeData theme, String title, {Color? tone}) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-    child: Text(
-      title,
-      style: theme.textTheme.titleMedium?.copyWith(color: tone),
+  Widget _card(List<Widget> children) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: EhCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     ),
   );
 
-  Widget _kv(ThemeData theme, String k, String v) => ListTile(
-    dense: true,
-    title: Text(k),
-    subtitle: Text(v.isEmpty ? '—' : v),
-  );
-
-  Widget _connectionTile(ThemeData theme, String name, ConnectionInfo conn) {
-    return ListTile(
-      title: Text(name),
-      subtitle: Text(conn.identity ?? '—'),
-      trailing: Chip(
-        label: Text(conn.state.label),
-        backgroundColor: _toneColor(theme, conn.state.tone),
-        labelStyle: TextStyle(
-          color: _toneFg(theme, conn.state.tone),
-          fontSize: 12,
+  Widget _connections() {
+    if (_loading && _summary == null) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: EhCard(
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('无法加载连接状态'),
+            subtitle: Text(_error!),
+            trailing: TextButton(
+              onPressed: _refresh,
+              child: const Text('重试'),
+            ),
+          ),
+        ),
+      );
+    }
+    final Map<String, ConnectionInfo> conns =
+        _summary?.connections ?? const <String, ConnectionInfo>{};
+    if (conns.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: EmptyState(
+          icon: Icons.cable_outlined,
+          primary: '无连接数据',
+          secondary: '服务端未返回外部连接状态',
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: EhCard(
+        child: Column(
+          children: <Widget>[
+            for (final MapEntry<String, ConnectionInfo> entry
+                in conns.entries)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  entry.value.label.isEmpty ? entry.key : entry.value.label,
+                ),
+                subtitle: Text(entry.value.identity ?? '—'),
+                trailing: ToneChip.status(status: entry.value.state),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  Color _toneColor(ThemeData theme, String tone) {
-    switch (tone) {
-      case 'success':
-        return Colors.green.shade100;
-      case 'danger':
-        return theme.colorScheme.errorContainer;
-      case 'warning':
-        return Colors.orange.shade100;
-      default:
-        return theme.colorScheme.surfaceContainerHighest;
-    }
-  }
+  Widget _kv(String k, String v) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(width: 110, child: Text(k)),
+        Expanded(child: Text(v.isEmpty ? '—' : v)),
+      ],
+    ),
+  );
 
-  Color _toneFg(ThemeData theme, String tone) {
-    switch (tone) {
-      case 'success':
-        return Colors.green.shade900;
-      case 'danger':
-        return theme.colorScheme.onErrorContainer;
-      case 'warning':
-        return Colors.orange.shade900;
-      default:
-        return theme.colorScheme.onSurfaceVariant;
+  Future<void> _confirmLogout() async {
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext c) => AlertDialog(
+        title: const Text('确认退出'),
+        content: const Text('退出后需要重新登录。'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(c).pop(true),
+            child: const Text('退出'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await widget.state.logout();
     }
   }
 }

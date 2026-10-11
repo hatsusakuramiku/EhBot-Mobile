@@ -8,7 +8,10 @@ import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
 import 'widgets/async_view.dart';
-import 'widgets/status_chip.dart';
+import 'widgets/eh_card.dart';
+import 'widgets/large_title_app_bar.dart';
+import 'widgets/section_header.dart';
+import 'widgets/tone_chip.dart';
 
 /// 活动：下载 / 打包队列快照 + 已完成历史（MVP 只读）。
 class ActivityPage extends StatefulWidget {
@@ -17,11 +20,15 @@ class ActivityPage extends StatefulWidget {
     required this.api,
     required this.thumbnails,
     this.monitor,
+    this.appBarActions = const <Widget>[],
   });
 
   final EhBotApi api;
   final ThumbnailLoader thumbnails;
   final LiveMonitor? monitor;
+
+  /// 顶栏动作（由 [HomeShell] 注入设置入口等）。
+  final List<Widget> appBarActions;
 
   @override
   State<ActivityPage> createState() => _ActivityPageState();
@@ -67,80 +74,111 @@ class _ActivityPageState extends State<ActivityPage> {
       onRetry: _reload,
       builder: (BuildContext context, (QueueSnapshot, List<JobSummary>) data) {
         final (QueueSnapshot queue, List<JobSummary> history) = data;
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    '下载中 ${queue.downloadCount}',
-                    key: const ValueKey<String>('activity-downloads'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    '打包中 ${queue.packingCount}',
-                    key: const ValueKey<String>('activity-packing'),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ],
+        return CustomScrollView(
+          slivers: <Widget>[
+            EhLargeTitleAppBar(
+              title: '活动',
+              subtitle: queue.live ? '有任务在推进中' : '队列空闲',
+              actions: widget.appBarActions,
             ),
-            if (queue.live)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text('有任务在推进中。'),
-              ),
-            if (queue.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Text('队列为空。'),
-              ),
-            for (final JobGroup group in <JobGroup>[
-              ...queue.downloads,
-              ...queue.packing,
-            ]) ...<Widget>[
-              Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 4),
-                child: Text(
-                  '${group.label}（${group.count}）',
-                  style: Theme.of(context).textTheme.titleMedium,
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: EhCard(
+                        dense: true,
+                        child: Text(
+                          '下载中 ${queue.downloadCount}',
+                          key: const ValueKey<String>('activity-downloads'),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EhCard(
+                        dense: true,
+                        child: Text(
+                          '打包中 ${queue.packingCount}',
+                          key: const ValueKey<String>('activity-packing'),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              for (final JobSummary job in group.jobs) _jobTile(job),
-            ],
-            Padding(
-              padding: const EdgeInsets.only(top: 24, bottom: 4),
-              child: Text(
-                '历史（${history.length}）',
-                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            if (history.isEmpty)
-              const Text('暂无历史任务。')
-            else
-              for (final JobSummary job in history) _jobTile(job),
+            ..._sectionSlivers(context, queue, history),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         );
       },
     ),
   );
 
-  Widget _jobTile(JobSummary job) {
+  List<Widget> _sectionSlivers(
+    BuildContext context,
+    QueueSnapshot queue,
+    List<JobSummary> history,
+  ) {
+    final List<JobGroup> groups = <JobGroup>[
+      ...queue.downloads,
+      ...queue.packing,
+    ];
+    return <Widget>[
+      if (groups.isEmpty && history.isEmpty)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('队列为空。')),
+          ),
+        ),
+      for (final JobGroup group in groups) ...<Widget>[
+        SliverToBoxAdapter(
+          child: SectionHeader(
+            title: '${group.label}（${group.count}）',
+          ),
+        ),
+        SliverList.builder(
+          itemCount: group.jobs.length,
+          itemBuilder: (BuildContext context, int index) =>
+              _jobTile(context, group.jobs[index]),
+        ),
+      ],
+      SliverToBoxAdapter(
+        child: SectionHeader(title: '历史（${history.length}）'),
+      ),
+      if (history.isEmpty)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('暂无历史任务。'),
+          ),
+        )
+      else
+        SliverList.builder(
+          itemCount: history.length,
+          itemBuilder: (BuildContext context, int index) =>
+              _jobTile(context, history[index]),
+        ),
+    ];
+  }
+
+  Widget _jobTile(BuildContext context, JobSummary job) {
     final bool hasCandidateId = job.candidateId.isNotEmpty;
     return ListTile(
       key: ValueKey<String>('activity-job-${job.id}'),
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       title: Text(job.displayTitle),
       subtitle: Text(
         job.errorMessage.isEmpty
             ? job.state.label
             : '${job.state.label} · ${job.errorMessage}',
       ),
-      trailing: StatusChip(status: job.state),
+      trailing: ToneChip.status(status: job.state),
       onTap: hasCandidateId ? () => unawaited(_openDetail(job)) : null,
     );
   }

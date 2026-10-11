@@ -24,7 +24,7 @@
 | M5 | 仓库改名 `ehbot-mobile` → `EhBot-Mobile` + 文档同步 | **本地完成**，远端待配置 | `progress.md` M5 |
 | M6 | 工作台 / 候选 / 活动 / 已下载 行可点 + 设置页只读 + 作品详情按钮动态渲染 | **完成** | `progress.md` M6 |
 | M7-A | 主题 + 设计 token + 13 个新组件 + 组件测试 | **完成**（基线 `132 tests / 0 failed`） | `progress.md` M7-A |
-| M7-B | 七页重写（工作台 / 候选 / 活动 / 已下载 / 详情 / 设置 / 登录） | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §5 |
+| M7-B | 七页重写（工作台 / 候选 / 活动 / 已下载 / 详情 / 设置 / 登录） | **完成**（契约零破坏，基线仍 132） | `progress.md` M7-B |
 | M7-C | 多服务器数据层 + 启动迁移 | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §4.4 |
 | M7-D | 动效与响应式打磨（`RepaintBoundary` / 三断点 / 黄金截图） | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §7 |
 | M8-A | 多服务器 UI（选择 / 编辑 / 切换） | 待实施 | `M8_FEATURE_REPLICATION_PROPOSAL.md` §7 |

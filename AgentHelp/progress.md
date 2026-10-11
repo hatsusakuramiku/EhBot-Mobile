@@ -159,3 +159,39 @@
   seed 兜底，故直接去掉该依赖，保持全仓统一走 `flutter/material`。
 - 文档：`AgentHelp/PHASES.md` 升基线链 + M7 拆成 A–D、M8 拆成 A–F 状态表。
 - 状态：**已落地并提交**；下一步 M7-B（七页重写）。
+
+## M7-B · 2026-10-11 · 七页重写（基线仍 132，契约零破坏）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`132 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：不变。
+- 改动（全部用 M7-A 的组件库重排）：
+  - `lib/ui/home_shell.dart`：去掉全局 AppBar，改为每页自带 `SliverAppBar.large`；
+    设置入口以共用 action（`shell-open-settings`）注入四页；底部换 `EhNavBar`。
+  - `lib/ui/dashboard_page.dart`：`CustomScrollView` + 大标题 + 2/4 列 `EhCard`
+    计数格 + `MetricStrip` 活动条 + `ToneChip` 需干预行；启动告警走 `EhCard.warning`。
+  - `lib/ui/candidates_page.dart`：大标题 + `ChoiceChip` tab + `EhSearchBar`；
+    行改 `EhCard`（`CoverThumb` 60×84 + 标题 + 作者/分类 + `ToneChip`）；空态 `EmptyState`。
+  - `lib/ui/activity_page.dart`：大标题 + 两张 `EhCard` 计数 + `SectionHeader` 分组。
+  - `lib/ui/downloaded_page.dart`：大标题 + `EhSearchBar`；行 `EhCard`（状态/打包/来源 chip）。
+  - `lib/ui/candidate_detail_page.dart`：`SliverAppBar.large` + 概览 `EhCard`
+    （封面 + `ToneChip` + `TagChip`）+ 元数据/时间线 + 主/次/危险三层操作（危险操作独立 `EhCard.warning`）。
+  - `lib/ui/settings_page.dart`：分区改为 `SectionHeader` + `EhCard`；连接状态用 `ToneChip`；
+    `settings-logout` 键保留。
+  - `lib/ui/login_page.dart`：`SliverAppBar.large` + `TabBar`（密码 / API Key 两 tab 保留）+
+    服务器行 `EhCard` + 圆角提示条。
+  - `lib/ui/widgets/status_chip.dart` **删除**，全部迁移到 `ToneChip`
+    （`ToneChip` 扩展为覆盖后端完整 tone 词表：success/danger/warning/info/active/waiting/muted，
+    并新增 `ToneChip.status(StatusView)` 工厂）。
+  - `lib/ui/widgets/large_title_app_bar.dart`：改为 `SliverAppBar.large` + 可选 `bottom`；
+    副标并入标题列（该版本 `SliverAppBar.large` 无 `subtitle` 形参）。
+- 验证：`flutter analyze` 零告警；`flutter test` → 132 / 0 failed
+  （M6/M7-A 的 key 与文案契约全部守住：`summary-total` / `dashboard-chip-*` / `dashboard-attn-*` /
+  `activity-downloads` / `activity-job-*` / `candidate-tab-*` / `candidate-load-more` /
+  `downloaded-*` / `detail-title` / `detail-approve` / `detail-reject` / `detail-action-*` /
+  `detail-prev` / `detail-next` / `settings-logout` / `login-*` / `NavigationBar` 四标签）。
+- 文档：`AgentHelp/PHASES.md`（M7-B 状态）。
+- 偏差记录：活动页未改成 `SegmentedButton` 分段——现有测试要求「进行中（1）」与「历史（1）」
+  同时可见，分段会隐藏其一；详情页操作区保留在滚动内容内（测试用 `scrollUntilVisible` 定位按钮，
+  若放进 sticky 底栏会失去可滚动性）。两点都写进本条目备查。
+- 状态：**已落地并提交**；下一步 M7-C（多服务器数据层 + 启动迁移）。

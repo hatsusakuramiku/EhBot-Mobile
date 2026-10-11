@@ -14,8 +14,12 @@ import 'dashboard_page.dart';
 import 'downloaded_page.dart';
 import 'settings_page.dart';
 import 'widgets/live_status_banner.dart';
+import 'widgets/nav_bar.dart';
 
 /// 登录后的四页壳：工作台 / 候选 / 活动 / 已下载，并持有实时监视器。
+///
+/// 每个子页自带 `SliverAppBar.large` 大标题；设置入口以共用 action 形式
+/// 从 [HomeShell] 注入，所以在哪一页都能进设置。
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.state, this.monitor});
 
@@ -80,6 +84,23 @@ class _HomeShellState extends State<HomeShell> {
     super.dispose();
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext _) => SettingsPage(state: widget.state),
+      ),
+    );
+  }
+
+  List<Widget> _appBarActions() => <Widget>[
+    IconButton(
+      key: const ValueKey<String>('shell-open-settings'),
+      tooltip: '设置',
+      icon: const Icon(Icons.settings_outlined),
+      onPressed: _openSettings,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final EhBotApi? api = widget.state.api;
@@ -88,27 +109,8 @@ class _HomeShellState extends State<HomeShell> {
     if (api == null || thumbnails == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final List<Widget> actions = _appBarActions();
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EhBot'),
-        actions: <Widget>[
-          IconButton(
-            key: const ValueKey<String>('shell-open-settings'),
-            tooltip: '设置',
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (BuildContext _) => SettingsPage(state: widget.state),
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: '退出登录',
-            icon: const Icon(Icons.logout),
-            onPressed: () => unawaited(widget.state.logout()),
-          ),
-        ],
-      ),
       body: Column(
         children: <Widget>[
           if (monitor != null) LiveStatusBanner(monitor: monitor),
@@ -121,6 +123,7 @@ class _HomeShellState extends State<HomeShell> {
                   thumbnails: thumbnails,
                   monitor: monitor,
                   candidatesTab: _candidatesTab,
+                  appBarActions: actions,
                   onOpenCandidates: (String tab) =>
                       setTab(1, candidateTab: tab),
                 ),
@@ -129,23 +132,26 @@ class _HomeShellState extends State<HomeShell> {
                   thumbnails: thumbnails,
                   monitor: monitor,
                   candidatesTab: _candidatesTab,
+                  appBarActions: actions,
                 ),
                 ActivityPage(
                   api: api,
                   monitor: monitor,
                   thumbnails: thumbnails,
+                  appBarActions: actions,
                 ),
                 DownloadedListPage(
                   api: api,
                   monitor: monitor,
                   thumbnails: thumbnails,
+                  appBarActions: actions,
                 ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: EhNavBar(
         selectedIndex: _index,
         onDestinationSelected: (int index) => setState(() => _index = index),
         destinations: const <NavigationDestination>[

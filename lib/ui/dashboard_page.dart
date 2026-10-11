@@ -4,11 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
-import '../state/live_monitor.dart';
 import '../media/thumbnail_loader.dart';
+import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
 import 'widgets/async_view.dart';
-import 'widgets/status_chip.dart';
+import 'widgets/eh_card.dart';
+import 'widgets/large_title_app_bar.dart';
+import 'widgets/metric_strip.dart';
+import 'widgets/section_header.dart';
+import 'widgets/tone_chip.dart';
 
 /// 候选计数键（`CANDIDATE_COUNT_KEYS`）→ 中文标签。
 const Map<String, String> kCandidateCountLabels = <String, String>{
@@ -32,6 +36,7 @@ class DashboardPage extends StatefulWidget {
     this.monitor,
     this.candidatesTab,
     this.onOpenCandidates,
+    this.appBarActions = const <Widget>[],
   });
 
   final EhBotApi api;
@@ -47,6 +52,9 @@ class DashboardPage extends StatefulWidget {
   /// Jump straight to the candidates list with the given sub-tab. Wired by
   /// [HomeShell] so the bottom-nav destination changes at the same time.
   final ValueChanged<String>? onOpenCandidates;
+
+  /// 顶栏动作（由 [HomeShell] 注入设置入口等）。
+  final List<Widget> appBarActions;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -85,111 +93,163 @@ class _DashboardPageState extends State<DashboardPage> {
       future: _future,
       onRetry: _reload,
       builder: (BuildContext context, Summary summary) {
-        final List<MapEntry<String, int>> counts = summary
-            .candidateCounts
+        final List<MapEntry<String, int>> counts = summary.candidateCounts
             .entries
             .where(
               (MapEntry<String, int> entry) =>
                   entry.key != 'total' && entry.value > 0,
             )
             .toList();
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            if (summary.startupErrors.isNotEmpty)
-              Card(
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    '服务端启动有告警：${summary.startupErrors.join('；')}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onErrorContainer,
+        return CustomScrollView(
+          slivers: <Widget>[
+            EhLargeTitleAppBar(
+              title: '工作台',
+              subtitle: '总览 · 需处理 ${summary.attentionTotal}',
+              actions: widget.appBarActions,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+              sliver: SliverList.list(
+                children: <Widget>[
+                  if (summary.startupErrors.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: EhCard(
+                        tone: EhCardTone.warning,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Icon(Icons.warning_amber_rounded),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                '服务端启动有告警：'
+                                '${summary.startupErrors.join('；')}',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SectionHeader(title: '候选'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      '共 ${summary.candidateCounts['total'] ?? 0} 个',
+                      key: const ValueKey<String>('summary-total'),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                ),
-              ),
-            _sectionTitle(context, '候选'),
-            Text(
-              '共 ${summary.candidateCounts['total'] ?? 0} 个',
-              key: const ValueKey<String>('summary-total'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                for (final MapEntry<String, int> entry in counts)
-                  if (widget.onOpenCandidates != null)
-                    ActionChip(
-                      key: ValueKey<String>('dashboard-chip-${entry.key}'),
-                      label: Text(
-                        '${kCandidateCountLabels[entry.key] ?? entry.key} ${entry.value}',
+                  _countGrid(context, counts),
+                  const SectionHeader(title: '活动'),
+                  MetricStrip(
+                    items: <MetricStripItem>[
+                      MetricStripItem(
+                        key: const ValueKey<String>('summary-downloads'),
+                        label: '下载中',
+                        value: summary.downloads,
+                        icon: Icons.downloading_outlined,
                       ),
-                      onPressed: () => widget.onOpenCandidates!(entry.key),
+                      MetricStripItem(
+                        key: const ValueKey<String>('summary-packing'),
+                        label: '打包中',
+                        value: summary.packing,
+                        icon: Icons.inventory_2_outlined,
+                      ),
+                      MetricStripItem(
+                        label: '需干预',
+                        value: summary.attentionTotal,
+                        icon: Icons.priority_high_outlined,
+                      ),
+                    ],
+                  ),
+                  SectionHeader(
+                    title: '需干预（${summary.attentionTotal}）',
+                  ),
+                  if (summary.attentionItems.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('暂无需要注意的任务。'),
                     )
                   else
-                    Chip(
-                      label: Text(
-                        '${kCandidateCountLabels[entry.key] ?? entry.key} ${entry.value}',
-                      ),
-                    ),
-              ],
-            ),
-            _sectionTitle(context, '活动'),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _metric(
-                    context,
-                    value: '${summary.downloads}',
-                    label: '下载中',
-                    keyName: 'summary-downloads',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _metric(
-                    context,
-                    value: '${summary.packing}',
-                    label: '打包中',
-                    keyName: 'summary-packing',
-                  ),
-                ),
-              ],
-            ),
-            if (summary.activityLive)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('有任务在推进中。'),
+                    for (final JobSummary job in summary.attentionItems)
+                      _attentionTile(context, job),
+                ],
               ),
-            _sectionTitle(context, '需干预（${summary.attentionTotal}）'),
-            if (summary.attentionItems.isEmpty)
-              const Text('暂无需要注意的任务。')
-            else
-              for (final JobSummary job in summary.attentionItems)
-                Builder(
-                  builder: (BuildContext ctx) => ListTile(
-                    key: ValueKey<String>('dashboard-attn-${job.id}'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(job.displayTitle),
-                    subtitle: Text(
-                      job.errorMessage.isEmpty
-                          ? job.state.label
-                          : '${job.state.label} · ${job.errorMessage}',
-                    ),
-                    trailing: StatusChip(status: job.state),
-                    onTap: job.candidateId.isEmpty
-                        ? null
-                        : () => _openAttention(ctx, job.candidateId),
-                  ),
-                ),
+            ),
           ],
         );
       },
     ),
+  );
+
+  Widget _countGrid(
+    BuildContext context,
+    List<MapEntry<String, int>> counts,
+  ) => LayoutBuilder(
+    builder: (BuildContext context, BoxConstraints constraints) {
+      final int columns = constraints.maxWidth >= 600 ? 4 : 2;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: GridView.count(
+          crossAxisCount: columns,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.6,
+          children: <Widget>[
+            for (final MapEntry<String, int> entry in counts)
+              EhCard(
+                key: ValueKey<String>('dashboard-chip-${entry.key}'),
+                onTap: widget.onOpenCandidates == null
+                    ? null
+                    : () => widget.onOpenCandidates!(entry.key),
+                semanticsLabel: '${kCandidateCountLabels[entry.key] ?? entry.key} '
+                    '${entry.value}',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      '${entry.value}',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${kCandidateCountLabels[entry.key] ?? entry.key} '
+                      '${entry.value}',
+                      style: Theme.of(context).textTheme.labelMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+
+  Widget _attentionTile(BuildContext context, JobSummary job) => ListTile(
+    key: ValueKey<String>('dashboard-attn-${job.id}'),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+    leading: const SizedBox(
+      width: 40,
+      height: 56,
+      child: Icon(Icons.report_gmailerrorred_outlined),
+    ),
+    title: Text(job.displayTitle),
+    subtitle: Text(
+      job.errorMessage.isEmpty
+          ? job.state.label
+          : '${job.state.label} · ${job.errorMessage}',
+    ),
+    trailing: ToneChip.status(status: job.state),
+    onTap: job.candidateId.isEmpty
+        ? null
+        : () => _openAttention(context, job.candidateId),
   );
 
   Future<void> _openAttention(BuildContext context, String candidateId) async {
@@ -208,31 +268,4 @@ class _DashboardPageState extends State<DashboardPage> {
       _reload();
     }
   }
-
-  Widget _sectionTitle(BuildContext context, String text) => Padding(
-    padding: const EdgeInsets.only(top: 20, bottom: 8),
-    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-  );
-
-  Widget _metric(
-    BuildContext context, {
-    required String value,
-    required String label,
-    required String keyName,
-  }) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            value,
-            key: ValueKey<String>(keyName),
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    ),
-  );
 }
