@@ -13,8 +13,9 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 
 - Flutter **3.47.6** stable / Dart 3.13.5（安装路径、基线见 `AgentHelp/AGENTS.md`）。
 - Android SDK 或 Xcode 之一（`flutter analyze` / `flutter test` 不需要，`flutter run` 需要）。
-- 一个已部署并**已启用移动端鉴权**的 EhBot 服务端（需要后端 B1/B2，见 `CONTRACT.md`）。
-  R52（v0.3.0rc2）还不含该鉴权，`POST /api/v1/auth/login` 会是 404。
+- 一个已部署并**已启用移动端鉴权**的 EhBot 服务端：需要 EhBot **R53 / R54**
+  （凭据表 + `/api/v1/auth/*` + Bearer 通道），动作面另需 **R64–R69**。
+  更早的版本 `POST /api/v1/auth/login` 会是 404。见 `CONTRACT.md`。
 
 ## 快速开始
 
@@ -24,7 +25,7 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 质量门禁（本地与 CI 同一套，Flutter 锁定 3.47.6）：
 
     flutter analyze  # 要求零告警
-    flutter test     # 当前基线 158 tests / 0 failed
+    flutter test     # 当前基线 161 tests / 0 failed
 
 发布（Android）：一次出 4 份 APK，目标平台在文件名里。需要在 `android/app/build.gradle.kts` 里开 `splits.abi` + `universalApk = true`（M6 follow-up）：
 
@@ -57,9 +58,16 @@ flutter build appbundle --release
 - **已下载**：搜索 + 加载更多；显示状态与打包状态。
 - **日志**：运行日志历史 + 实时流（SSE），可切级别、可暂停。
 
-- **设置**（AppBar 右上角图标）：账号、服务器、外部服务、启动警告、退出登录，
-  以及「分区设置」入口（外部连接 / 来源规则 / 解析规则 / 自动审批 / 归档与工具 /
-  路径与命名 / AI 供应商 / 密码库 / 系统九个分区）。
+- **设置**（AppBar 右上角图标）：**外观**（主题模式 + 配色方案，纯本机）、
+  账号信息、服务器、外部服务、启动警告、退出登录，以及「分区设置」入口
+  （外部连接 / 来源规则 / 解析规则 / 自动审批 / 归档与工具 / 路径与命名 /
+  AI 供应商 / 密码库 / 系统九个分区）。
+
+## 外观
+
+设置 › 外观 可自由选择：**主题模式**（跟随系统 / 浅色 / 深色）与**配色方案**
+（8 个预设色 + 色相滑块自定义）。纯本机偏好，存在 `SharedPreferences`
+（`ehbot.theme_mode` / `ehbot.seed_color`），不涉及服务器。
 
 ## 多服务器
 

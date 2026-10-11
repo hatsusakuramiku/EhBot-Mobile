@@ -57,9 +57,9 @@ int ehColumnsForWidth(
   return narrow;
 }
 
-/// 应用主题。浅 / 深双轨，Seed 粉红 `0xFFE91E63`（EH 类内容的强调色偏好）。
+/// 应用主题。浅 / 深双轨，seed 可在运行时改（M9-A）。
 class AppTheme {
-  /// Seed color。
+  /// 默认 seed（粉红，EH 类内容的强调色偏好）。
   static const Color seed = Color(0xFFE91E63);
 
   /// 把后端的 `StatusView.tone`（`success / danger / warning / info / muted`）
@@ -87,17 +87,17 @@ class AppTheme {
     };
   }
 
-  static ThemeData light() {
+  static ThemeData light([Color seedColor = seed]) {
     final ColorScheme cs = ColorScheme.fromSeed(
-      seedColor: seed,
+      seedColor: seedColor,
       brightness: Brightness.light,
     );
     return _buildTheme(cs, Brightness.light);
   }
 
-  static ThemeData dark() {
+  static ThemeData dark([Color seedColor = seed]) {
     final ColorScheme cs = ColorScheme.fromSeed(
-      seedColor: seed,
+      seedColor: seedColor,
       brightness: Brightness.dark,
     );
     return _buildTheme(cs, Brightness.dark);

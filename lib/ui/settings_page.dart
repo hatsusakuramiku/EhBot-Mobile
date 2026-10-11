@@ -4,6 +4,7 @@ import '../api/ehbot_api.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import 'settings_sections_page.dart';
+import 'widgets/appearance_section.dart';
 import 'widgets/eh_card.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/section_header.dart';
@@ -80,6 +81,11 @@ class _SettingsPageState extends State<SettingsPage> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: <Widget>[
+            const SectionHeader(title: '外观'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: AppearanceSection(state: widget.state),
+            ),
             const SectionHeader(title: '账号'),
             _card(<Widget>[
               _kv('用户名', who?.username ?? '—'),

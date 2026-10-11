@@ -351,3 +351,30 @@
 - 文档：`AgentHelp/PHASES.md`、`README.md`（五页 + 多服务器 + 设置分区说明、基线 158）、
   `CHANGELOG.md`（v0.2.0 段落）。
 - 状态：**M8 全部六个子阶段完成**。本轮 M7 + M8 合计基线 105 → 158。
+
+## M9-A · 2026-10-11 · 外观：主题模式 + 配色方案（基线 158 → 161）
+
+- 版本：Flutter 3.47.6 stable；App 版本升 **v0.3.0**。
+- 测试基线：`161 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：无（纯本地 `SharedPreferences`）。
+- 背景：运营者实测 v0.2.0 第 3 项「需要能自定义主题模式、配色方案自由选择」。
+  M9 总方案见 `AgentHelp/M9_OPERATOR_FIXES_PROPOSAL.md`（v2，已按 EhBot `7ebab47` 重写）。
+- 改动：
+  - `lib/state/theme_store.dart`（新增）：`ThemeSettings{mode, seed}`（8 个预设色 +
+    `kDefaultSeed`）与 `ThemeStore`（`ehbot.theme_mode` / `ehbot.seed_color`）。
+  - `lib/ui/theme.dart`：`AppTheme.light([seed])` / `dark([seed])` 接受运行时 seed。
+  - `lib/state/app_state.dart`：`themeSettings` + `setThemeMode()` / `setSeedColor()`；
+    `bootstrap()` 先加载外观再决定首屏。
+  - `lib/ui/app.dart`：`theme` / `darkTheme` 用当前 seed，`themeMode` 用当前模式。
+  - `lib/ui/widgets/appearance_section.dart`（新增）：模式 `SegmentedButton`
+    （跟随系统 / 浅色 / 深色）+ 预设色圆点 + 色相滑块（不引第三方取色器）。
+  - `lib/ui/settings_page.dart`：顶部新增「外观」区。
+  - `test/ui/appearance_settings_test.dart`（新增 3 条）：默认值 / 持久化与重载 /
+    设置页外观区控件可点并改色。
+  - `test/ui/settings_page_test.dart`：分区整体下移，改为 `scrollUntilVisible` 定位。
+- 设计取舍：不引入 `dynamic_color`（M7 已因跨包类型冲突移除）；色相滑块替代取色器，
+  少一个依赖、多一条可测路径。
+- 验证：`flutter analyze` 零告警；`flutter test` → 161 / 0 failed（158 + 3）。
+- 文档：`AgentHelp/PHASES.md`（M9-A 状态）、`README.md`（外观 + 基线 161）、
+  `CHANGELOG.md`（v0.3.0 段落）。
+- 状态：**已落地**；下一步 M9-B（数据层重写）。

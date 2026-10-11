@@ -30,7 +30,9 @@ void main() {
     final AppState state = await makeBootstrappedState(client);
     await tester.pumpWidget(MaterialApp(home: SettingsPage(state: state)));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('账号'), 100);
     expect(find.text('账号'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('服务器'), 100);
     expect(find.text('服务器'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('外部服务'), 100);
     expect(find.text('外部服务'), findsOneWidget);

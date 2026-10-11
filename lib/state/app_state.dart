@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/api_exception.dart';
@@ -15,6 +15,7 @@ import '../media/thumbnail_cache.dart';
 import '../media/thumbnail_loader.dart';
 import 'server_store.dart';
 import 'settings.dart';
+import 'theme_store.dart';
 
 /// 应用阶段：决定首屏。
 enum AppStage { loading, serverSetup, login, ready }
@@ -27,10 +28,13 @@ class AppState extends ChangeNotifier {
     required this.clientFactory,
     required this.thumbnailCache,
     ServerStore? serverStore,
-  }) : serverStore = serverStore ?? ServerStore();
+    ThemeStore? themeStore,
+  }) : serverStore = serverStore ?? ServerStore(),
+       themeStore = themeStore ?? ThemeStore();
 
   final SettingsStore settingsStore;
   final ServerStore serverStore;
+  final ThemeStore themeStore;
   final TokenStore tokenStore;
   final http.Client Function(AppSettings settings) clientFactory;
   final ThumbnailCache thumbnailCache;
@@ -45,6 +49,9 @@ class AppState extends ChangeNotifier {
 
   /// 当前选中的档案 id；未选中为 `null`。
   String? activeServerId;
+
+  /// 外观偏好（主题模式 + seed 配色），纯本地。
+  ThemeSettings themeSettings = const ThemeSettings();
 
   /// 一次性提示（例如「API Key 已失效，请重新登录」）。
   String? notice;
@@ -80,12 +87,27 @@ class AppState extends ChangeNotifier {
 
   /// 启动：读设置 →（有凭据就恢复会话）→ 决定首屏。
   Future<void> bootstrap() async {
+    themeSettings = await themeStore.load();
     await _loadServers();
     if (!settings.isConfigured) {
       _setStage(AppStage.serverSetup);
       return;
     }
     await _restoreSession();
+  }
+
+  /// 切换主题模式（跟随系统 / 浅色 / 深色）。
+  Future<void> setThemeMode(ThemeMode mode) async {
+    themeSettings = themeSettings.copyWith(mode: mode);
+    await themeStore.save(themeSettings);
+    notifyListeners();
+  }
+
+  /// 换 seed 配色。
+  Future<void> setSeedColor(Color color) async {
+    themeSettings = themeSettings.copyWith(seed: color);
+    await themeStore.save(themeSettings);
+    notifyListeners();
   }
 
   /// 读多服务器档案；没有档案时把旧的单服务器设置迁成一份档案（无感升级）。

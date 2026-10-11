@@ -18,9 +18,9 @@ class EhBotApp extends StatelessWidget {
       animation: state,
       builder: (BuildContext context, Widget? _) => MaterialApp(
         title: 'EhBot',
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
+        theme: AppTheme.light(state.themeSettings.seed),
+        darkTheme: AppTheme.dark(state.themeSettings.seed),
+        themeMode: state.themeSettings.mode,
         home: switch (state.stage) {
           AppStage.loading => const _LoadingPage(),
           AppStage.serverSetup => ServerSetupPage(state: state),
