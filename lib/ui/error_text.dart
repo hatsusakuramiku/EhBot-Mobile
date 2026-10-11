@@ -42,7 +42,8 @@ String describeError(Object error, {CredentialKind? kind}) {
       return '会话已过期，请重新登录。';
   }
   if (error.statusCode == 404) {
-    return '接口不存在（HTTP 404）：服务器可能还没部署移动端鉴权（B1/B2）。';
+    return '接口不存在（HTTP 404）：这台服务器上还没有这个端点，'
+        '可能需要升级 EhBot 后端。';
   }
   if (error.statusCode == 429) {
     return '尝试次数过多，请稍后再试。';
