@@ -177,7 +177,7 @@
   本仓库不生成客户端代码（手写 model，保持薄）。
 - 若将来做 Flutter Web 构建，需要后端加 CORS 与 cookie/CSRF 策略——当前**不做**。
 
-## 7. 复刻 WEBUI 所需的端点清单（2026-10-11 按 EhBot `7ebab47` 更正）
+## 7. 复刻 WEBUI 所需的端点清单（2026-10-11 按 EhBot `ad7d8a3` / R80 更正）
 
 > 本节早前把整张表标成「后端尚未实现」，**那是错的**：dedup 与 logs 早已存在，
 > 路径还写错了。下表已按当前源码更正，并标注每一行是**已就绪**还是**仍需后端**。
@@ -208,22 +208,52 @@
 | 作品动作 | POST | `/api/v1/works/{id}/sources/{provider}` | 按来源拉取：五个 provider，一律重新拉 |
 | 已下载 | POST | `/api/v1/downloaded/{id}/rename` | 改名 / 移动；两栏一起发 |
 
-**仍需后端（客户端渲染为禁用态 + 说明，不要撞 404）**
+**已就绪（R74–R80 补上，客户端 M10 待接）**
+
+九区设置的写入端点。读取仍是 `GET /api/v1/settings/{section}`（§5）。
+**「一次调用 = 一次表单提交」**：同一张表单的字段一个 body 交完，不要拆成多次。
 
 | 模块 | 方法 | 路径 | 用途 |
 |------|------|------|------|
-| sources | GET/POST/PATCH/DELETE | `/api/v1/settings/sources` + `/{id}` | 监听来源白名单 + 过滤规则 |
-| sources | POST | `/api/v1/settings/sources/dialogs` | 用 TG 用户账户读会话列表 |
-| parse | GET/PUT | `/api/v1/settings/parse` | 消息解析规则 + AI 候选判定 |
-| auto-approval | GET/POST/PATCH/DELETE | `/api/v1/settings/auto-approval/rules` + `/{id}` | 自动审批规则 CRUD |
-| auto-approval | POST | `/api/v1/settings/auto-approval/rules/{id}/dry-run` | 试跑：返回命中数与样例 id |
-| archive | GET/PUT | `/api/v1/settings/archive/{torrent,limits,profiles}` | qBittorrent / 自动打包 / 安全限制 / 工具 profile |
-| paths | GET/PUT/POST | `/api/v1/settings/paths/{template,rules,ai,preview}` | 路径模板 / 路径规则 / AI 模式 / 预览 |
-| paths | POST | `/api/v1/settings/paths/rearchive` | 一键重新归档（可选 `force`） |
-| ai | GET/POST/PATCH/DELETE | `/api/v1/settings/ai/{providers,models}` + `/{id}` | AI 供应商与模型 CRUD |
-| ai | GET/PUT | `/api/v1/settings/ai/chain` | 主力 + 备用模型链 |
-| ai | POST | `/api/v1/settings/ai/verify` | 测试模型连通性 |
-| 作品动作 | PUT | `/api/v1/works/{id}/archive-path` | 改归档路径（`actions.edit_archive_path`） |
+| sources | POST | `/api/v1/settings/sources` | 新建 / 按 `chat_id` upsert 一个来源（`source_type` / `chat_id` / `display_name` / `enabled` + 规则字段） |
+| sources | PUT | `/api/v1/settings/sources/batch` | `{action:"enable"\|"disable"\|"delete"\|"apply", source_ids, …规则}` |
+| parse | PUT | `/api/v1/settings/parse` | 解析规则（`require_gallery_link` / `accept_photo` / `accept_archive` / `accept_preview` / `archive_formats`） |
+| parse | POST | `/api/v1/settings/parse/reset` | 恢复出厂方案 |
+| parse | PUT | `/api/v1/settings/parse/ai` | AI 候选判定：开关 + 提示词（**等付出厂文本 = 用默认**）+ 回退（`reject`/`accept`，必填） |
+| parse | PUT | `/api/v1/settings/parse/model-source` | 候选判定跟随全局默认 / 本页单独指定 |
+| auto-approval | POST | `/api/v1/settings/auto-approval/rules` | 新建 / 按 `rule_id` 覆盖；body 带条件 **AST** |
+| auto-approval | POST | `/api/v1/settings/auto-approval/rules/dry-run` | 试跑（只读），返回 `{dry_run}` |
+| auto-approval | PUT / DELETE | `/api/v1/settings/auto-approval/rules/{id}[/toggle]` | `{enabled}` / 删除 |
+| archive | PUT | `/api/v1/settings/archive/torrent` | qBittorrent（密码只上行） |
+| archive | POST | `/api/v1/settings/archive/torrent/test` | 连通测试 → `{connected, version}` |
+| archive | PUT | `/api/v1/settings/archive/limits` | 安全限制 + 保留原档 + 图片质量 |
+| archive | PUT | `/api/v1/settings/archive/auto-pack` | `{enabled}` |
+| paths | PUT | `/api/v1/settings/paths/template` | 布局模板 + 可选 `title_source` |
+| paths | POST | `/api/v1/settings/paths/rules` | 新建 / 按 `path_rule_id` 覆盖；条件 **AST** + `path_template` |
+| paths | PUT / DELETE | `/api/v1/settings/paths/rules/{id}[/toggle]` | `{enabled}` / 删除 |
+| paths | PUT | `/api/v1/settings/paths/ai` | 路径来源（`ai` / 模板）+ 提示词 + 两个数字 + 三个开关 |
+| paths | PUT | `/api/v1/settings/paths/ai/prompt` | 写提示词；空串 = 出厂那份 |
+| ai | PUT | `/api/v1/settings/ai/master` | 总开关 `{enabled}`（只改状态，不删东西） |
+| ai | POST / DELETE | `/api/v1/settings/ai/providers[/{id}]` | 新建 / 覆盖 / 删除 |
+| ai | POST | `/api/v1/settings/ai/providers/{id}/keys` | `{api_keys}`（多行，明文只上行） |
+| ai | PUT / POST / DELETE | `/api/v1/settings/ai/keys/{id}[/toggle\|/reset]` | 启停 / 解除冷却 / 删除 |
+| ai | POST | `/api/v1/settings/ai/providers/{id}/models` | `{model_name:[…]}` |
+| ai | POST | `/api/v1/settings/ai/providers/{id}/models/fetch` | 拉远端模型名（只读）→ `{names}` |
+| ai | PUT / DELETE | `/api/v1/settings/ai/models/{id}[/toggle\|/params]` | 启停 / 参数 / 删除 |
+| ai | POST | `/api/v1/settings/ai/models/{id}/verify` | 单模型连通（失败 400 + 供应商原话） |
+| ai | POST | `/api/v1/settings/ai/providers/{id}/verify`、`/ai/verify` | 测该供应商 / 全部 |
+| ai | PUT | `/api/v1/settings/ai/chain/{scope}` | `{action:"primary"\|"append"\|"shift"\|"remove", model_id, delta?}`；`scope ∈ {default, archive_path, candidate_admission}` |
+
+**仍只在网页层（刻意不接，客户端渲染为禁用态 + 说明）**
+
+| 模块 | 路径 | 为什么 |
+|------|------|--------|
+| 作品动作 | `PUT /api/v1/works/{id}/archive-path` | 尚未补；`actions.edit_archive_path` 时禁用 |
+| paths | `/paths/template/preview` | 纯预览：省一次往返不值得单开端点 |
+| paths | `/paths/rearchive` | 一键重新归档会重算并移动库里所有作品，不该从手机误触 |
+| paths | `/paths/ai/cache/clear` | 桌面便利 |
+| archive | `/archive-settings/toolchain/install`、`/profiles/{name}` | 命名服务器上的可执行文件与路径 |
+| sources | `/sources/dialogs` | 要用 TG 用户账户读会话列表 |
 
 补充：
 
@@ -231,4 +261,6 @@
   Bearer 签发时已保证改过密码。
 - `passwords` / `connections` 两类**永不回显明文**：`GET` 只给标识、状态与时间。
   唯一例外是 `api-key-generate` 的**响应**——明文只出现那一次（与网页的一次性 reveal 同义）。
-- 仍需后端的那批，若要补，走 EhBot 仓库的 `AgentHelp/MOBILE_API_COMPLETION_PROPOSAL.md` §6。
+- 九区写入（R74–R80）与作品动作（R70–R73）都已就绪，设计记录见 EhBot 仓库的
+  `AgentHelp/MOBILE_API_COMPLETION_PROPOSAL.md` 与 `MOBILE_API_COMPLETION_ROUND2_PROPOSAL.md`；
+  「刻意不接」那张表的理由也写在后者里。
