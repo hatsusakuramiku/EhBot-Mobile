@@ -24,6 +24,10 @@ const String kJobCancel = 'cancel';
 /// `stop-seeding` 是**路径**里的拼法；`job_summary.actions` 里对应的键是 `stop_seeding`。
 const String kJobStopSeeding = 'stop-seeding';
 
+/// 任务优先级范围（EhBot `app/downloads/models.py`：`MIN_JOB_PRIORITY` / `MAX_JOB_PRIORITY`）。
+const int kMinJobPriority = 1;
+const int kMaxJobPriority = 999;
+
 /// 设置分区里**已有 PUT 写入**的三个（R67–R69）。
 const String kSettingsConnections = 'connections';
 const String kSettingsSystem = 'system';
@@ -199,6 +203,27 @@ class EhBotApi {
         'candidate_ids': candidateIds.map(_asId).toList(),
         if (deleteFiles) 'delete_files': true,
         if (repack) 'repack': true,
+      },
+    );
+    return ReviewBatchResult.fromJson(_ok(response));
+  }
+
+  /// 任务的批量动作：`retry` / `pause` / `resume` / `cancel`，
+  /// 也可以调 `priority`（那时要带 [priority]）。
+  ///
+  /// 走 `/api/v1/jobs/batch`——与 WebUI 活动页的批量条同一个后端协程，
+  /// 所以两边的「一个坏任务不会refuse另外四十九个」行为一致。
+  Future<ReviewBatchResult> jobBatch({
+    required String action,
+    required List<String> jobIds,
+    int? priority,
+  }) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/jobs/batch',
+      body: <String, Object?>{
+        'action': action,
+        'job_ids': jobIds.map(_asId).toList(),
+        'priority': ?priority,
       },
     );
     return ReviewBatchResult.fromJson(_ok(response));

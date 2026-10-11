@@ -449,12 +449,15 @@ class DownloadedWork {
     this.category = '',
     this.language = '',
     this.tags = const <String>[],
+    this.providerCode = '',
     this.providerLabel = '',
     this.state = const StatusView(code: '', label: ''),
+    this.packCode = '',
     this.packLabel = '',
     this.cbzPath = '',
     this.archivePath = '',
     this.archiveSize = 0,
+    this.actions = const <String, bool>{},
   });
 
   factory DownloadedWork.fromJson(Map<String, dynamic> json) => DownloadedWork(
@@ -464,12 +467,15 @@ class DownloadedWork {
     category: asString(json['category']),
     language: asString(json['language']),
     tags: asStringList(json['tags']),
+    providerCode: asString(asMap(json['provider'])?['code']),
     providerLabel: asString(asMap(json['provider'])?['label']),
     state: StatusView.fromJson(json['state']),
+    packCode: asString(asMap(json['pack'])?['code']),
     packLabel: asString(asMap(json['pack'])?['label']),
     cbzPath: asString(json['cbz_path']),
     archivePath: asString(json['archive_path']),
     archiveSize: asInt(json['archive_size']),
+    actions: _boolMap(json['actions']),
   );
 
   final String candidateId;
@@ -478,12 +484,25 @@ class DownloadedWork {
   final String category;
   final String language;
   final List<String> tags;
+  final String providerCode;
   final String providerLabel;
   final StatusView state;
+  final String packCode;
   final String packLabel;
   final String cbzPath;
   final String archivePath;
   final int archiveSize;
+
+  /// 后端算好的可做动作：`repack` / `remove` / `redownload` / `rename`。
+  /// 在途的任务会同时压下 `remove` 与 `redownload`（会和 worker 抢同一行）。
+  final Map<String, bool> actions;
+
+  bool get canRepack => actions['repack'] ?? false;
+  bool get canRemove => actions['remove'] ?? false;
+  bool get canRedownload => actions['redownload'] ?? false;
+
+  /// 已打包的再打包叫「重新打包」，没打包过的是第一次「打包」。
+  bool get isPacked => packCode == 'packed';
 
   String get displayTitle => title.isEmpty ? '候选 #$candidateId' : title;
 }

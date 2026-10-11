@@ -9,13 +9,22 @@ import '../../api/models.dart';
 /// 可见性一律来自 `job_summary.actions`——客户端不自己推导状态机，
 /// 那是后端算好的策略（「停滞的种子不是失败」）。
 class JobActionSpec {
-  const JobActionSpec({required this.action, required this.label, this.confirm});
+  const JobActionSpec({
+    required this.action,
+    required this.label,
+    this.confirm,
+    this.confirmLabel,
+  });
 
   final String action;
   final String label;
 
   /// 需要二次确认时的正文；null 表示直接执行。
   final String? confirm;
+
+  /// 确认按钮的文案（WebUI 用「确认取消」而不是「取消」，免得和对话框的
+  /// 取消按钮同字）。null 时退回 [label]。
+  final String? confirmLabel;
 }
 
 /// 这个任务自己能做的事，按 WebUI 的顺序。
@@ -28,12 +37,14 @@ List<JobActionSpec> jobActionSpecs(JobSummary job) => <JobActionSpec>[
       action: kJobCancel,
       label: '取消',
       confirm: '取消这个任务？已经下载 / 打包出来的文件会保留。',
+      confirmLabel: '确认取消',
     ),
   if (job.canStopSeeding)
     const JobActionSpec(
       action: kJobStopSeeding,
       label: '停止做种',
       confirm: '从 qBittorrent 移除这个条目？已归档的文件保留在原处。',
+      confirmLabel: '确认停止做种',
     ),
 ];
 

@@ -156,7 +156,7 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
         context,
         title: spec.label,
         message: spec.confirm!,
-        confirmLabel: spec.label,
+        confirmLabel: spec.confirmLabel ?? spec.label,
       );
       if (!ok || !mounted) {
         return;

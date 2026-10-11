@@ -252,7 +252,7 @@ void main() {
     // 取消要确认。
     await tapKey(tester, 'job-77-cancel');
     expect(calls, <String>['/api/v1/jobs/77/retry']);
-    await tester.tap(find.text('取消').last);
+    await tester.tap(find.text('确认取消'));
     await tester.pumpAndSettle();
     expect(calls, <String>['/api/v1/jobs/77/retry', '/api/v1/jobs/77/cancel']);
   });

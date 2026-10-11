@@ -426,3 +426,33 @@
 - 文档：`README.md`（详情页与动作整节重写、包体积 / 设置分区说明、基线 177）、
   `CHANGELOG.md`（v0.3.0）、`AgentHelp/PHASES.md`（M9-B / M9-C 状态）。
 - 状态：**已落地**；下一步 M9-D（已下载 / 活动 / 去重）。
+
+## M9-D · 2026-10-11 · 已下载 / 活动 / 去重（基线 177 → 184）
+
+- 版本：Flutter 3.47.6 stable；App v0.3.0。
+- 测试基线：`184 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：**已就绪**——`POST /api/v1/downloaded/batch`（R60）、`POST /api/v1/jobs/batch`、
+  `/api/v1/downloaded/dedup`（R60）。
+- 背景：运营者实测第 4、5 项「没有删除相关功能」「下载方式切换、重新下载等功能也没有实现」。
+- 改动：
+  - `lib/api/models.dart`：`DownloadedWork` 补 `providerCode` / `packCode` / `actions`
+    （`repack` / `remove` / `redownload`），加 `canRepack` / `canRemove` / `canRedownload` /
+    `isPacked`——行内按钮的可见性照后端走，不自己推状态机（在途的作品后端会压掉
+    `remove` / `redownload`，因为会和 worker 抢同一行）。
+  - `lib/api/ehbot_api.dart`：新增 `jobBatch`（`jobs/batch`，带可选 `priority`）+
+    `kMinJobPriority` / `kMaxJobPriority`（= 后端 `downloads/models.py` 的 1 / 999）。
+  - `lib/ui/widgets/selection_bar.dart`（新增）：多选底部工具条（`已选 N` + 取消 + 动作），
+    候选 / 已下载 / 活动三页共用。
+  - `lib/ui/downloaded_page.dart`：长按进入多选（点行=切换选中，未选中时点行=打开详情）；
+    批量条 = 批量打包 / 重新下载 / 移除记录 / 移除并删除文件
+    （两个移除是**两个按钮**，安全的那条不做成勾选框的默认值）；
+    行内动作 = 打包·重新打包 + 重新下载。
+  - `lib/ui/activity_page.dart`：任务行加 `JobActionsBar`（重试 / 继续 / 暂停 / 取消 /
+    停止做种 + 停滞种子的切源）；长按多选后的批量条 = 批量恢复 / 批量暂停 / 批量重试 /
+    调整优先级 / 批量取消；取消前确认（与 WebUI 同义的文案与目标）。
+  - 去重页无需改代码：M9-B/C 已把 `dedupPlan` / `dedupApply` 的路径修到
+    `/api/v1/downloaded/dedup`，本次补了 API 级断言。
+  - 测试：`test/ui/downloaded_actions_test.dart`（4 条）+ `test/ui/activity_actions_test.dart`（5 条）。
+- 验证：`flutter analyze` 零告警；`flutter test` → 184 / 0 failed（177 + 7）。
+- 文档：`AgentHelp/PHASES.md`、`README.md`、`CHANGELOG.md`。
+- 状态：**已落地**；下一步 M9-F（候选删除 + 手动添加）。
