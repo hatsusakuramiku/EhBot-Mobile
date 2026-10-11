@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
+import 'settings_sections_page.dart';
 import 'widgets/eh_card.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/section_header.dart';
@@ -99,6 +100,35 @@ class _SettingsPageState extends State<SettingsPage> {
             ]),
             const SectionHeader(title: '外部服务'),
             _connections(),
+            const SectionHeader(title: '分区设置'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: EhCard(
+                key: const ValueKey<String>('settings-open-sections'),
+                dense: true,
+                onTap: widget.state.api == null
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (BuildContext _) =>
+                              SettingsSectionsPage(api: widget.state.api!),
+                        ),
+                      ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.dashboard_customize_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '连接 / 来源 / 解析 / 自动审批 / 归档 / 路径 / AI / 密码库 / 系统',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
             if (_summary != null &&
                 _summary!.startupErrors.isNotEmpty) ...<Widget>[
               const SectionHeader(title: '启动告警'),

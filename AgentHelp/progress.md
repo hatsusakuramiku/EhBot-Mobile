@@ -308,3 +308,27 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 152 / 0 failed（150 + 2）。
 - 文档：`AgentHelp/PHASES.md`（M8-D 状态）。
 - 状态：**已落地并提交**；下一步 M8-E（设置八区）。
+
+## M8-E · 2026-10-11 · 设置分区（九区，两态渲染，基线 152 → 155）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`155 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：`B-M8`（未实现）；`GET /api/v1/settings/<section>` 404 时给出「后端未就绪」。
+- 改动：
+  - `lib/api/ehbot_api.dart`：新增 `settingsSection(section)`（`/api/v1/settings/<code>`）。
+  - `lib/ui/settings_sections_page.dart`（新增）：
+    - `SettingsSection` + `kSettingsSections` 九区（connections / sources / parse /
+      auto-approval / archive / paths / ai / passwords / system），每区带图标与本区说明；
+    - `SettingsSectionsPage`：宽屏（≥ 840）走 `NavigationRail`，窄屏走横向 `ChoiceChip`
+      选择条（测试键 `settings-section-<code>`）；
+    - `SettingsSectionView`：拉取该区快照 → `AsyncView`。**200 时把 JSON 摊平成
+      key/value 只读列表**（后端字段一变这里自动跟上，不用再发一次客户端版本）；
+      404 时显示「后端未就绪」提示。
+  - `lib/ui/settings_page.dart`：新增「分区设置」入口卡片（键 `settings-open-sections`）。
+  - `test/ui/settings_sections_page_test.dart`（3 条）：九区齐全 / 200 渲染 key-value / 404 提示。
+- 设计取舍：本区各表单（连接凭据、来源白名单、规则编辑器、AI 供应商…）都需要真实后端
+  才能验证；后端未实现前写成不可验证的复杂表单属于投机。因此本期交付**可用的两态渲染骨架**
+  + 完整分区导航，后端 B-M8 落地后每区再补专用表单（各开一期）。
+- 验证：`flutter analyze` 零告警；`flutter test` → 155 / 0 failed（152 + 3）。
+- 文档：`AgentHelp/PHASES.md`（M8-E 状态）。
+- 状态：**已落地并提交**；下一步 M8-F（多选 + 滑动手势）。

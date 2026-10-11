@@ -133,6 +133,13 @@ class EhBotApi {
   Stream<LiveEvent> logsStream() =>
       SseEventSource(client: client, path: '/api/v1/logs/stream').connect();
 
+  /// 设置分区快照（M8-E）：`connections` / `sources` / `parse` / `auto-approval` /
+  /// `archive` / `paths` / `ai` / `passwords` / `system`。
+  ///
+  /// 后端未实现时抛 404 的 `ApiException`，由页面切成「后端未就绪」态。
+  Future<Map<String, dynamic>> settingsSection(String section) async =>
+      _ok(await client.get('/api/v1/settings/$section'));
+
   Map<String, dynamic> _ok(http.Response response) =>
       decodeJsonObject(ensureSuccess(response));
 
