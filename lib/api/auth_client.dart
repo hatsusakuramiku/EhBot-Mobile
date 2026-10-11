@@ -109,6 +109,23 @@ class AuthClient {
     ),
   );
 
+  /// PUT（EhBot R67–R69 的设置写入用的是 PUT）。
+  Future<http.Response> putJson(
+    String path, {
+    Object? body,
+    Map<String, String>? headers,
+  }) => _run(
+    (auth) => inner.put(
+      resolveUri(baseUri, path),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        ...?headers,
+        ...auth,
+      },
+      body: body == null ? null : jsonEncode(body),
+    ),
+  );
+
   Future<http.Response> _run(
     Future<http.Response> Function(Map<String, String> authHeaders) attempt,
   ) async {

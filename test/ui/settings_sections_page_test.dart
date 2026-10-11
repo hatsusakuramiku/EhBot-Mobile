@@ -73,6 +73,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('B-M8'), findsOneWidget);
+    expect(find.textContaining('后端还没有'), findsOneWidget);
   });
 }

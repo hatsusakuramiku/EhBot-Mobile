@@ -378,3 +378,51 @@
 - 文档：`AgentHelp/PHASES.md`（M9-A 状态）、`README.md`（外观 + 基线 161）、
   `CHANGELOG.md`（v0.3.0 段落）。
 - 状态：**已落地**；下一步 M9-B（数据层重写）。
+
+## M9-B / M9-C · 2026-10-11 · 数据层重写 + 详情页固定底栏与真实动作（基线 161 → 177）
+
+- 版本：Flutter 3.47.6 stable；App v0.3.0。
+- 测试基线：`177 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：**全部已就绪**——R64（`candidates/batch` 的 `delete` / `delete-files`）、
+  R65（`works/{id}/requeue`）、R66（`candidates/manual` 409）、R60–R63（dedup / logs）、
+  以及早就有的 `jobs/{id}/{action}`、`jobs/{id}/switch-source`、`PATCH works/{id}/metadata`。
+- 两期合一个 commit（先例：`feat(M8-B/C)`）：数据层一改，详情页立刻编不过，
+  分开提交会留下一个红的中断点。
+- 改动：
+  - `lib/api/models.dart`：
+    - `WorkDetail.jobs` 真正解析（此前只留了 `jobCount`，job id 被丢掉——
+      切源与任务操作没有它根本发不出去）；
+    - `WorkActions`（平铺布尔 + `sources[]`）替代原来的 `Map<String,bool>`；
+    - `JobSummary` 扩成详情与活动共用（补 `providerCode` / `priority` / 产物路径 /
+      `actions` / `torrent`），加 `canRetry` / `canSwitchSource` 等派生；
+    - 新增 `SourceAction` / `WorkMessage` / `WorkAttachment` / `ArchivePathView` / `TorrentState`；
+      `MetadataEntry` 补 `field_name`（PATCH 要用）；`WorkDetail` 补
+      `warningHint` / `warnings` / `filterOrigin` / `exGid` / `previewUrl` /
+      `torrent*` / `magnetUrl` / `rawMetadata` / `messages` / `archivePath`；
+    - 删掉 `prevId` / `nextId`（JSON 快照不返回，只有 HTML 页面有）。
+  - `lib/api/ehbot_api.dart`：
+    - 新增 `deleteCandidates`、`jobAction(jobId)`、`jobPriority`、`switchSource`、
+      `requeueWork`、`updateMetadata`、`downloadedBatch`、`putSettingsSection`；
+    - 修 `dedupPlan` / `dedupApply` 路径为 `/api/v1/downloaded/dedup`；
+    - `manualAdd` 认 409 `CANDIDATE_DUPLICATE` → `ManualAddResult.duplicate`；
+    - 动作词表常量（`kCandidateDeleteAction` / `kDownloaded*` / `kJob*`）。
+  - `lib/api/auth_client.dart`：新增 `putJson`（R67–R69 用 PUT）。
+  - `lib/ui/candidate_detail_page.dart`（重写）：固定操作底栏（`bottomNavigationBar`，
+    横向可滚动、危险动作在最右）+ 正文补全（告警 / 过滤来源 / 任务卡 / 消息 /
+    画廊与种子 / 归档 / 原始元数据）+ 元数据行内编辑（`MetadataEditor`）。
+  - `lib/ui/widgets/job_actions.dart`（新增）：`JobActionsBar` + `JobActionSpec` +
+    `kSwitchSourceTargets` + `confirmDialog`。切源只给后端支持的两种
+    （`TELEGRAPH` / `EXHENTAI`），且只在**停滞的种子**上出现（WebUI 活动页同条件）。
+  - `lib/ui/error_text.dart`：`kEndpointMissingHint` 去掉过时的「B-M8」字样；
+    新增 `kActionEndpointMissingHint`。
+  - 测试：`test/ui/candidate_detail_actions_test.dart` 重写并扩到 9 条
+    （真实 actions 渲染、禁用态、job id 回归、切源 GP 确认、两条删除、元数据 PATCH）；
+    `test/api/ehbot_api_test.dart` +11 条（每个新方法的路径 / body / 解析）；
+    四个「404 说明」用例改断言新文案；`candidate_detail_page_test.dart` 去掉
+    `scrollUntilVisible`（底栏是第二个 Scrollable）。
+- 关键回归点：**不允许**再出现 `POST /api/v1/jobs/{候选 id}/…`；
+  任务动作一律 `job_summary.job_id`。
+- 验证：`flutter analyze` 零告警；`flutter test` → 177 / 0 failed（161 + 16）。
+- 文档：`README.md`（详情页与动作整节重写、包体积 / 设置分区说明、基线 177）、
+  `CHANGELOG.md`（v0.3.0）、`AgentHelp/PHASES.md`（M9-B / M9-C 状态）。
+- 状态：**已落地**；下一步 M9-D（已下载 / 活动 / 去重）。

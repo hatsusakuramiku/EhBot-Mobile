@@ -54,7 +54,13 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('detail-title')), findsOneWidget);
     expect(find.text('某本子'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('元数据'), 300);
+    // 底栏是第二个 Scrollable，所以不能用 scrollUntilVisible 的默认查找；
+    // 直接拖正文那一个。
+    await tester.drag(
+      find.byKey(const ValueKey<String>('detail-scroll')),
+      const Offset(0, -600),
+    );
+    await tester.pumpAndSettle();
     expect(find.text('元数据'), findsOneWidget);
     expect(find.text('标题'), findsOneWidget);
     expect(find.text('时间线'), findsOneWidget);
@@ -75,7 +81,7 @@ void main() {
     );
 
     final Finder approve = find.byKey(const ValueKey<String>('detail-approve'));
-    await tester.scrollUntilVisible(approve, 300);
+    // 操作在固定底栏里，不需要滚动就能点到（M9-C）。
     await tester.tap(approve);
     await tester.pumpAndSettle();
 

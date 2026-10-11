@@ -9,7 +9,14 @@ bool isEndpointMissing(Object error) =>
 
 /// 「后端未就绪」的说明文案。
 const String kEndpointMissingHint =
-    '后端还没有这一步（需要 EhBot 仓库的 B-M8 期）。当前调用会返回 404。';
+    '后端还没有这个端点（EhBot 侧尚未实现）。当前调用会返回 404。';
+
+/// 详情页里**已知**后端 `/api/v1` 还没有的动作的说明（禁用按钮的 tooltip）。
+///
+/// 这些动作在网页层存在（cookie + CSRF），移动端够不着：
+/// 重获元数据 / 打包与重新打包 / 需要修订 / 按来源拉取原档。
+const String kActionEndpointMissingHint =
+    '后端 /api/v1 还没有这个动作（目前只有网页层有）。需要 EhBot 再补一期端点。';
 
 /// 把异常翻成给运营者看的中文提示（不包含 token / 密钥）。
 String describeError(Object error, {CredentialKind? kind}) {

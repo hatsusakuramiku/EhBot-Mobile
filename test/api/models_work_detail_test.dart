@@ -12,16 +12,6 @@ void main() {
     expect(detail.can('reject'), isFalse);
   });
 
-  test('WorkDetail.fromJson: prev/next 为空串时为 null', () {
-    final WorkDetail detail = WorkDetail.fromJson(<String, Object?>{
-      'candidate_id': '11',
-      'prev_id': '',
-      'next_id': '',
-    });
-    expect(detail.prevId, isNull);
-    expect(detail.nextId, isNull);
-  });
-
   test('WorkDetail.fromJson: 缺 cover 时为 null', () {
     final WorkDetail detail = WorkDetail.fromJson(<String, Object?>{
       'candidate_id': '11',

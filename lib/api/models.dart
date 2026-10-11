@@ -195,17 +195,26 @@ class CandidatePage {
 }
 
 /// 活动任务（`job_summary`），队列与历史共用。
+///
+/// 详情页的 `jobs[]` 是**同一个形状**（EhBot `serializers.job_summary`），
+/// 所以两处共用这一个类：切源与任务操作都要用到 `job_id`。
 class JobSummary {
   const JobSummary({
     required this.id,
     this.candidateId = '',
     this.title = '',
+    this.providerCode = '',
     this.providerLabel = '',
     this.state = const StatusView(code: '', label: ''),
     this.group = '',
     this.progressPercent = 0,
     this.errorMessage = '',
     this.note = '',
+    this.priority = 0,
+    this.artifactPath = '',
+    this.artifactCbzPath = '',
+    this.actions = const <String, bool>{},
+    this.torrent = const TorrentState(),
     this.updatedAt,
   });
 
@@ -213,25 +222,53 @@ class JobSummary {
     id: asString(json['job_id']),
     candidateId: asString(json['candidate_id']),
     title: asString(json['title']),
+    providerCode: asString(asMap(json['provider'])?['code']),
     providerLabel: asString(asMap(json['provider'])?['label']),
     state: StatusView.fromJson(json['state']),
     group: asString(json['group']),
     progressPercent: asInt(json['progress_percent']),
     errorMessage: asString(json['error_message']),
     note: asString(asMap(json['note'])?['label']),
+    priority: asInt(json['priority']),
+    artifactPath: asString(json['artifact_path']),
+    artifactCbzPath: asString(json['artifact_cbz_path']),
+    actions: _boolMap(json['actions']),
+    torrent: TorrentState.fromJson(json['torrent']),
     updatedAt: parseTimestamp(json['updated_at']),
   );
 
   final String id;
   final String candidateId;
   final String title;
+  final String providerCode;
   final String providerLabel;
   final StatusView state;
   final String group;
   final int progressPercent;
   final String errorMessage;
   final String note;
+  final int priority;
+  final String artifactPath;
+  final String artifactCbzPath;
+
+  /// 这个任务自己能做什么（后端算好的策略：停滞的种子不是失败）。
+  final Map<String, bool> actions;
+  final TorrentState torrent;
   final DateTime? updatedAt;
+
+  /// 注意键名：`stop_seeding` 是下划线，而 URL 里的动作名是 `stop-seeding`。
+  bool get canRetry => actions['retry'] ?? false;
+  bool get canPause => actions['pause'] ?? false;
+  bool get canResume => actions['resume'] ?? false;
+  bool get canCancel => actions['cancel'] ?? false;
+  bool get canStopSeeding => actions['stop_seeding'] ?? false;
+
+  bool get hasAnyAction =>
+      canRetry || canPause || canResume || canCancel || canStopSeeding || canSwitchSource;
+
+  /// 只有**停滞的种子**才有切源入口——这是 WebUI 活动页的条件，
+  /// 因为切源会真的结束当前这条 torrent（`DownloadService.switch_source`）。
+  bool get canSwitchSource => torrent.waitingForPeers;
 
   String get displayTitle {
     if (title.isNotEmpty) {
@@ -239,6 +276,41 @@ class JobSummary {
     }
     return candidateId.isEmpty ? '任务 #$id' : '候选 #$candidateId';
   }
+}
+
+/// 任务里的 torrent 转移信息（`job_summary.torrent`）。
+class TorrentState {
+  const TorrentState({
+    this.waitingForPeers = false,
+    this.seeding = false,
+    this.alreadyInClient = false,
+    this.stalledMinutes,
+    this.detail = '',
+  });
+
+  factory TorrentState.fromJson(Object? json) {
+    final Map<String, dynamic>? map = asMap(json);
+    if (map == null) {
+      return const TorrentState();
+    }
+    return TorrentState(
+      waitingForPeers: asBool(map['waiting_for_peers']),
+      seeding: asBool(map['seeding']),
+      alreadyInClient: asBool(map['already_in_client']),
+      stalledMinutes: map['stalled_minutes'] is num
+          ? (map['stalled_minutes'] as num).toInt()
+          : null,
+      detail: asString(map['detail']),
+    );
+  }
+
+  final bool waitingForPeers;
+  final bool seeding;
+  final bool alreadyInClient;
+
+  /// `null` 表示「没停滞」，与「停滞 0 分钟」不同。
+  final int? stalledMinutes;
+  final String detail;
 }
 
 /// 队列里的一个分组（后端已分好组，客户端不重新分组）。
@@ -464,6 +536,7 @@ class TimelineEntry {
 /// 详情页的元数据条目（`metadata`）。
 class MetadataEntry {
   const MetadataEntry({
+    this.name = '',
     this.label = '',
     this.value = '',
     this.isManual = false,
@@ -471,19 +544,149 @@ class MetadataEntry {
   });
 
   factory MetadataEntry.fromJson(Map<String, dynamic> json) => MetadataEntry(
+    name: asString(json['field_name']),
     label: asString(json['field_label']),
     value: asString(json['field_value']),
     isManual: asBool(json['is_manual']),
     isLocked: asBool(json['is_locked']),
   );
 
+  /// 后端字段名（`METADATA_FIELDS`，如 `Title` / `Artist`），PATCH 时要用它。
+  final String name;
   final String label;
   final String value;
   final bool isManual;
   final bool isLocked;
 }
 
+/// 详情页 `actions.sources[]` 的一项：四个来源之一。
+///
+/// `action` 是**网页路径**（`/candidates/{id}/…`），移动端不能直接调——
+/// 必须用 [providerCode] 走 `POST /api/v1/jobs/{job_id}/switch-source`。
+class SourceAction {
+  const SourceAction({
+    this.providerCode = '',
+    this.providerLabel = '',
+    this.available = false,
+    this.hint = '',
+  });
+
+  factory SourceAction.fromJson(Map<String, dynamic> json) => SourceAction(
+    providerCode: asString(asMap(json['provider'])?['code']),
+    providerLabel: asString(asMap(json['provider'])?['label']),
+    available: asBool(json['available']),
+    hint: asString(json['hint']),
+  );
+
+  final String providerCode;
+  final String providerLabel;
+  final bool available;
+  final String hint;
+}
+
+/// `/works/{id}` 的 `actions`：平铺布尔 + 四个来源。
+///
+/// 真实键（EhBot `app/api/works.py::work_actions`）：`approve` / `reject` /
+/// `needs_revision` / `requeue` / `edit_metadata` / `fetch_metadata` /
+/// `convert` / `reconvert` / `edit_archive_path` / `sources[]`。
+/// **没有** `delete` / `delete_files` / `repack` / `switch_source_*`。
+class WorkActions {
+  const WorkActions({
+    this.flags = const <String, bool>{},
+    this.sources = const <SourceAction>[],
+  });
+
+  factory WorkActions.fromJson(Object? json) {
+    final Map<String, dynamic>? map = asMap(json);
+    if (map == null) {
+      return const WorkActions();
+    }
+    return WorkActions(
+      flags: _boolMap(map),
+      sources: asMapList(map['sources']).map(SourceAction.fromJson).toList(),
+    );
+  }
+
+  final Map<String, bool> flags;
+  final List<SourceAction> sources;
+
+  bool get isEmpty => flags.isEmpty && sources.isEmpty;
+
+  /// True only when the backend explicitly says the named action is allowed.
+  bool can(String name) => flags[name] ?? false;
+}
+
+/// 来源消息的一条附件（`messages[].attachments[]`）。
+class WorkAttachment {
+  const WorkAttachment({
+    this.kind = const StatusView(code: '', label: ''),
+    this.fileName = '',
+  });
+
+  factory WorkAttachment.fromJson(Map<String, dynamic> json) => WorkAttachment(
+    kind: StatusView.fromJson(json['kind']),
+    fileName: asString(json['file_name']),
+  );
+
+  final StatusView kind;
+  final String fileName;
+}
+
+/// 来源消息（`messages[]`）。
+class WorkMessage {
+  const WorkMessage({
+    this.chatTitle = '',
+    this.messageId = '',
+    this.text = '',
+    this.attachments = const <WorkAttachment>[],
+    this.date,
+  });
+
+  factory WorkMessage.fromJson(Map<String, dynamic> json) => WorkMessage(
+    chatTitle: asString(json['chat_title']),
+    messageId: asString(json['message_id']),
+    text: asString(json['message_text']),
+    attachments: asMapList(json['attachments'])
+        .map(WorkAttachment.fromJson)
+        .toList(),
+    date: parseTimestamp(json['message_date']),
+  );
+
+  final String chatTitle;
+  final String messageId;
+  final String text;
+  final List<WorkAttachment> attachments;
+  final DateTime? date;
+}
+
+/// 归档路径表单的当前值（`archive_path`）。
+class ArchivePathView {
+  const ArchivePathView({this.directory = '', this.filename = ''});
+
+  factory ArchivePathView.fromJson(Object? json) {
+    final Map<String, dynamic>? map = asMap(json);
+    if (map == null) {
+      return const ArchivePathView();
+    }
+    return ArchivePathView(
+      directory: asString(map['directory']),
+      filename: asString(map['filename']),
+    );
+  }
+
+  final String directory;
+  final String filename;
+
+  bool get isEmpty => directory.isEmpty && filename.isEmpty;
+
+  bool get isNotEmpty => !isEmpty;
+}
+
 /// `GET /api/v1/works/{candidate_id}` 的详情。
+///
+/// 注意：JSON 详情**不含**顶层 `artist` / `category` / `tags` / `cover`，
+/// 也**不含** `prev_id` / `next_id`（只有 HTML 页面有）。这些字段这里保留，
+/// 是为了让列表页把已有的候选信息透传进来做兜底。
 class WorkDetail {
   const WorkDetail({
     required this.id,
@@ -496,13 +699,22 @@ class WorkDetail {
     this.tags = const <String>[],
     this.cover,
     this.filterReason = '',
+    this.filterOrigin = '',
+    this.warningHint = '',
+    this.warnings = const <StatusView>[],
+    this.exGid = '',
+    this.previewUrl = '',
+    this.torrentCount,
+    this.torrentHash = '',
+    this.magnetUrl = '',
     this.cbzPath = '',
+    this.archivePath = const ArchivePathView(),
     this.metadata = const <MetadataEntry>[],
+    this.rawMetadata = const <MetadataEntry>[],
+    this.messages = const <WorkMessage>[],
     this.timeline = const <TimelineEntry>[],
-    this.actions = const <String, bool>{},
-    this.prevId,
-    this.nextId,
-    this.jobCount = 0,
+    this.actions = const WorkActions(),
+    this.jobs = const <JobSummary>[],
     this.live = false,
   });
 
@@ -517,13 +729,28 @@ class WorkDetail {
     tags: asStringList(json['tags']),
     cover: CoverRef.fromJson(json['cover']),
     filterReason: asString(json['filter_reason']),
+    filterOrigin: asString(json['filter_origin']),
+    warningHint: asString(json['warning_hint']),
+    warnings: asMapList(json['warnings'])
+        .map(StatusView.fromJson)
+        .toList(),
+    exGid: asString(json['ex_gid']),
+    previewUrl: asString(json['preview_url']),
+    torrentCount: json['torrent_count'] is num
+        ? (json['torrent_count'] as num).toInt()
+        : null,
+    torrentHash: asString(json['torrent_hash']),
+    magnetUrl: asString(json['magnet_url']),
     cbzPath: asString(asMap(json['archive'])?['path']),
+    archivePath: ArchivePathView.fromJson(json['archive_path']),
     metadata: asMapList(json['metadata']).map(MetadataEntry.fromJson).toList(),
+    rawMetadata: asMapList(json['raw_metadata'])
+        .map(MetadataEntry.fromJson)
+        .toList(),
+    messages: asMapList(json['messages']).map(WorkMessage.fromJson).toList(),
     timeline: asMapList(json['timeline']).map(TimelineEntry.fromJson).toList(),
-    actions: _workActionMap(json['actions']),
-    prevId: _nullableString(json['prev_id']),
-    nextId: _nullableString(json['next_id']),
-    jobCount: asMapList(json['jobs']).length,
+    actions: WorkActions.fromJson(json['actions']),
+    jobs: asMapList(json['jobs']).map(JobSummary.fromJson).toList(),
     live: asBool(json['live']),
   );
 
@@ -537,23 +764,45 @@ class WorkDetail {
   final List<String> tags;
   final CoverRef? cover;
   final String filterReason;
+
+  /// 谁给出了这个过滤裁决：`自动规则` / `人工` / `来源元数据规则`；空串表示无从解释。
+  final String filterOrigin;
+  final String warningHint;
+  final List<StatusView> warnings;
+  final String exGid;
+  final String previewUrl;
+
+  /// `null` 表示尚未查询（与「确认没有种子」不同）。
+  final int? torrentCount;
+  final String torrentHash;
+  final String magnetUrl;
   final String cbzPath;
+  final ArchivePathView archivePath;
   final List<MetadataEntry> metadata;
+  final List<MetadataEntry> rawMetadata;
+  final List<WorkMessage> messages;
   final List<TimelineEntry> timeline;
-  final Map<String, bool> actions;
-  final String? prevId;
-  final String? nextId;
-  final int jobCount;
+
+  /// 当前可见动作（真实键见 [WorkActions] 的注释）。
+  final WorkActions actions;
+  final List<JobSummary> jobs;
   final bool live;
 
   String get displayTitle => title.isEmpty ? 'work #$id' : title;
 
+  int get jobCount => jobs.length;
+
+  bool get hasGallery => exGid.isNotEmpty;
+
   /// True only when the backend explicitly says the named action is allowed.
-  bool can(String name) => actions[name] ?? false;
+  bool can(String name) => actions.can(name);
 }
 
-/// Parse the flat `actions` block on a work into `name -> bool` (M6).
-Map<String, bool> _workActionMap(Object? raw) {
+/// Parse a `{name: bool}` block (work `actions`, job `actions`) into a map.
+///
+/// Non-boolean values collapse to false: `actions` on a work carries a
+/// `sources` **list** beside the flags, and that list is read by its own parser.
+Map<String, bool> _boolMap(Object? raw) {
   final Map<String, dynamic>? map = asMap(raw);
   if (map == null) return const <String, bool>{};
   return <String, bool>{
@@ -629,6 +878,7 @@ class ManualAddResult {
     this.candidateId,
     this.existingCandidateId,
     this.message = '',
+    this.duplicate = false,
   });
 
   factory ManualAddResult.fromJson(Map<String, dynamic> json) =>
@@ -636,13 +886,18 @@ class ManualAddResult {
         candidateId: _nullableString(json['candidate_id']),
         existingCandidateId: _nullableString(json['existing_candidate_id']),
         message: asString(json['message']),
+        duplicate: asBool(json['duplicate']),
       );
 
   final String? candidateId;
   final String? existingCandidateId;
   final String message;
 
-  bool get isDuplicate => existingCandidateId != null;
+  /// 后端把重复报成 **409** `CANDIDATE_DUPLICATE`（EhBot R66），
+  /// 所以这个标记由 `EhBotApi.manualAdd` 在 409 分支上置位，而不是解析 200 的响应体。
+  final bool duplicate;
+
+  bool get isDuplicate => duplicate || existingCandidateId != null;
 }
 
 /// 去重计划里的一件作品。

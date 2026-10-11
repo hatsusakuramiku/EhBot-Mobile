@@ -1,9 +1,33 @@
 import 'package:http/http.dart' as http;
 
+import 'api_exception.dart';
 import 'auth_client.dart';
 import 'events.dart';
 import 'json_io.dart';
 import 'models.dart';
+
+/// 候选删除动作（EhBot `CANDIDATE_DELETE_ACTIONS`）：走同一个 `candidates/batch`。
+const String kCandidateDeleteAction = 'delete';
+const String kCandidateDeleteFilesAction = 'delete-files';
+
+/// 已下载批量动作（EhBot `DOWNLOADED_BATCH_ACTIONS`）。
+const String kDownloadedRepack = 'repack';
+const String kDownloadedRemove = 'remove';
+const String kDownloadedRedownload = 'redownload';
+
+/// 任务生命周期动作（EhBot `JOB_ACTIONS`）：`POST /api/v1/jobs/{job_id}/{action}`。
+const String kJobRetry = 'retry';
+const String kJobPause = 'pause';
+const String kJobResume = 'resume';
+const String kJobCancel = 'cancel';
+
+/// `stop-seeding` 是**路径**里的拼法；`job_summary.actions` 里对应的键是 `stop_seeding`。
+const String kJobStopSeeding = 'stop-seeding';
+
+/// 设置分区里**已有 PUT 写入**的三个（R67–R69）。
+const String kSettingsConnections = 'connections';
+const String kSettingsSystem = 'system';
+const String kSettingsPasswords = 'passwords';
 
 /// `/api/v1` 数据端点：读为主，另含候选审核（走批量端点，单个也是批量）。
 ///
@@ -52,6 +76,27 @@ class EhBotApi {
     return ReviewBatchResult.fromJson(_ok(response));
   }
 
+  /// 彻底删除候选（[deleteFiles] 为真则连压缩包与 CBZ 一起删）。
+  ///
+  /// 与通过 / 驳回同一个端点：后端按 `delete` / `delete-files` 分派到
+  /// `apply_candidate_delete_batch`（EhBot R64）。取不到删的状态由服务端判定，
+  /// 被拒的候选出现在结果的 `skipped` 里。
+  Future<ReviewBatchResult> deleteCandidates({
+    required List<String> candidateIds,
+    bool deleteFiles = false,
+  }) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/candidates/batch',
+      body: <String, Object?>{
+        'action': deleteFiles
+            ? kCandidateDeleteFilesAction
+            : kCandidateDeleteAction,
+        'candidate_ids': candidateIds.map(_asId).toList(),
+      },
+    );
+    return ReviewBatchResult.fromJson(_ok(response));
+  }
+
   Future<QueueSnapshot> queue() async =>
       QueueSnapshot.fromJson(_ok(await client.get('/api/v1/queue')));
 
@@ -65,13 +110,98 @@ class EhBotApi {
     return asMapList(json['items']).map(JobSummary.fromJson).toList();
   }
 
-  /// Trigger an action on a candidate. Backend may return the updated work;
-  /// we ignore the body for now and let the caller reload.
-  Future<void> jobAction({required String id, required String action}) async {
+  /// 任务生命周期操作：`retry` / `pause` / `resume` / `cancel` / `stop-seeding`。
+  ///
+  /// [jobId] 必须是**任务 id**（`job_summary.job_id`），不是候选 id——传候选 id
+  /// 会 404 / 400，这正是 M9 之前的老 bug。
+  Future<void> jobAction({
+    required String jobId,
+    required String action,
+  }) async {
     await client.postJson(
-      '/api/v1/jobs/$id/$action',
+      '/api/v1/jobs/$jobId/$action',
       body: const <String, Object?>{},
     );
+  }
+
+  /// 调整任务优先级（`POST /api/v1/jobs/{job_id}/priority`）。
+  Future<void> jobPriority({
+    required String jobId,
+    required int priority,
+  }) async {
+    await client.postJson(
+      '/api/v1/jobs/$jobId/priority',
+      body: <String, Object?>{'priority': priority},
+    );
+  }
+
+  /// 切换下载来源，返回**新任务 id**（切源会替换任务）。
+  ///
+  /// [provider] 取自详情页 `actions.sources[].provider.code`
+  /// （`TELEGRAM` / `TELEGRAM_USER` / `EXHENTAI` / `TELEGRAPH` / `EH_TORRENT`）。
+  /// 那个 `action` 字段是网页路径，不能直接调。
+  Future<String> switchSource({
+    required String jobId,
+    required String provider,
+  }) async {
+    final Map<String, dynamic> json = _ok(
+      await client.postJson(
+        '/api/v1/jobs/$jobId/switch-source',
+        body: <String, Object?>{'provider': provider},
+      ),
+    );
+    return asString(json['job_id']);
+  }
+
+  /// 重新排队（`POST /api/v1/works/{candidate_id}/requeue`，EhBot R65）。
+  ///
+  /// 只在 `actions.requeue` 为真时才有意义：后端只接受
+  /// `REJECTED` / `NEEDS_REVISION` / `FAILED` 三种状态。
+  Future<void> requeueWork(String candidateId, {String note = ''}) async {
+    await client.postJson(
+      '/api/v1/works/$candidateId/requeue',
+      body: <String, Object?>{if (note.isNotEmpty) 'note': note},
+    );
+  }
+
+  /// 改元数据 / 锁定字段（`PATCH /api/v1/works/{candidate_id}/metadata`）。
+  ///
+  /// [fields] / [locks] 各自独立，至少给一个。字段名必须是后端
+  /// `METADATA_FIELDS` 里的名字（`Title` / `Artist` / …），也就是
+  /// `WorkDetail.metadata[].name`；不认识的字段会 400 `METADATA_FIELD_INVALID`。
+  Future<void> updateMetadata({
+    required String candidateId,
+    Map<String, String> fields = const <String, String>{},
+    Map<String, bool> locks = const <String, bool>{},
+  }) async {
+    await client.patchJson(
+      '/api/v1/works/$candidateId/metadata',
+      body: <String, Object?>{
+        if (fields.isNotEmpty) 'fields': fields,
+        if (locks.isNotEmpty) 'locks': locks,
+      },
+    );
+  }
+
+  /// 已下载作品的批量动作：`repack` / `remove`（+[deleteFiles]）/ `redownload`。
+  ///
+  /// [repack] 只对 `redownload` 有意义（重新下载时顺带重新打包）。
+  Future<ReviewBatchResult> downloadedBatch({
+    required String action,
+    required List<String> candidateIds,
+    bool deleteFiles = false,
+    bool repack = false,
+  }) async {
+    final http.Response response = await client.postJson(
+      '/api/v1/downloaded/batch',
+      body: <String, Object?>{
+        'action': action,
+        'candidate_ids': candidateIds.map(_asId).toList(),
+        if (deleteFiles) 'delete_files': true,
+        if (repack) 'repack': true,
+      },
+    );
+    return ReviewBatchResult.fromJson(_ok(response));
   }
 
   Future<DownloadedPage> downloaded({
@@ -95,24 +225,39 @@ class EhBotApi {
   Future<ClientMeta> meta() async =>
       ClientMeta.fromJson(_ok(await client.get('/api/v1/meta')));
 
-  /// 手动添加任务（粘贴链接）。后端未实现时抛 404 的 `ApiException`。
+  /// 手动添加任务（粘贴链接）。
+  ///
+  /// 重复不是错误：后端回 **409** `CANDIDATE_DUPLICATE`，已有候选 id 在
+  /// `error.details.existing_candidate_id`（EhBot R66）。这里翻成
+  /// [ManualAddResult]，让页面直接给「查看已有候选」入口。
   Future<ManualAddResult> manualAdd(String url) async {
     final http.Response response = await client.postJson(
       '/api/v1/candidates/manual',
       body: <String, Object?>{'url': url},
     );
+    if (response.statusCode == 409) {
+      final ApiException error = errorFromResponse(response);
+      final String existing = asString(
+        asMap(error.details)?['existing_candidate_id'],
+      );
+      return ManualAddResult(
+        existingCandidateId: existing.isEmpty ? null : existing,
+        message: error.message,
+        duplicate: true,
+      );
+    }
     return ManualAddResult.fromJson(_ok(response));
   }
 
   /// 一键去重的计划（只读）。
   Future<DedupPlan> dedupPlan() async =>
-      DedupPlan.fromJson(_ok(await client.get('/api/v1/dedup/plan')));
+      DedupPlan.fromJson(_ok(await client.get('/api/v1/downloaded/dedup')));
 
-  /// 执行去重。
-  Future<DedupResult> dedupApply({bool apply = true}) async {
+  /// 执行去重（后端不接受 body 参数，一个 POST 就是「执行」）。
+  Future<DedupResult> dedupApply() async {
     final http.Response response = await client.postJson(
-      '/api/v1/dedup',
-      body: <String, Object?>{'apply': apply},
+      '/api/v1/downloaded/dedup',
+      body: const <String, Object?>{},
     );
     return DedupResult.fromJson(_ok(response));
   }
@@ -139,6 +284,17 @@ class EhBotApi {
   /// 后端未实现时抛 404 的 `ApiException`，由页面切成「后端未就绪」态。
   Future<Map<String, dynamic>> settingsSection(String section) async =>
       _ok(await client.get('/api/v1/settings/$section'));
+
+  /// 写入设置分区（R67–R69 只有 `connections` / `system` / `passwords` 三区）。
+  ///
+  /// 响应是该分区**写入后**的快照。`passwords` 的 `api-key-generate` 会在
+  /// 响应里多带一次明文 `api_key_plaintext`，且只有那一次。
+  Future<Map<String, dynamic>> putSettingsSection(
+    String section,
+    Map<String, Object?> body,
+  ) async => _ok(
+    await client.putJson('/api/v1/settings/$section', body: body),
+  );
 
   Map<String, dynamic> _ok(http.Response response) =>
       decodeJsonObject(ensureSuccess(response));

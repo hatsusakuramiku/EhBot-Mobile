@@ -2,11 +2,32 @@
 
 ## v0.3.0（未发布）
 
-运营者实测 v0.2.0 后的五项修订（M9）。基线 `158 → 161 tests / 0 failed`（进行中）。
+运营者实测 v0.2.0 后的五项修订（M9）。基线 `158 → 177 tests / 0 failed`（进行中）。
 
 - **外观（M9-A）**：设置新增「外观」区——主题模式（跟随系统 / 浅色 / 深色）+
   配色方案（8 个预设色 + 色相滑块）。纯本机偏好，存 `SharedPreferences`
   （`ehbot.theme_mode` / `ehbot.seed_color`）；主题 seed 改为运行时可变。
+- **详情页固定操作底栏 + 真实动作（M9-B/C）**：操作从滚动内容末尾搬到
+  `bottomNavigationBar`（对齐 WebUI 的 sticky 动作条），不必滑到底才能点。
+  按钮可见性改读后端**真实**的 `actions`（`approve` / `reject` / `needs_revision` /
+  `requeue` / `fetch_metadata` / `convert` / `reconvert` / `edit_archive_path` /
+  `sources[]`）——M9 之前客户端读的是 `delete` / `switch_source_*` 这些**后端从不返回**
+  的键，所以删除与切源按钮一个都不渲染。
+- **动作修到正确的端点**：任务操作一律用 **job id** 打
+  `/api/v1/jobs/{job_id}/{retry|pause|resume|cancel|stop-seeding}`（此前错打候选 id，
+  且动作名是自造的）；切源 `…/switch-source`；重新排队 `/works/{id}/requeue`；
+  彻底删除 / 删文件 `candidates/batch` 的 `delete` / `delete-files`；
+  元数据 `PATCH /works/{id}/metadata`。
+- **详情内容补全**：告警与 `warning_hint`、过滤说明（含来源）、任务卡（状态 / provider /
+  进度 / 该任务自己的动作）、来源消息与附件、画廊 ID / 预览页 / 种子 / 磁力链、
+  归档目录与文件名、原始元数据。
+- **更正 M8 的三处端点错误**：去重改走 `/api/v1/downloaded/dedup`（GET 计划 /
+  POST 执行）；手动添加的「重复」按后端实际行为识别为 **409** `CANDIDATE_DUPLICATE`
+  （`error.details.existing_candidate_id`）；`AuthClient` 补 `putJson`（设置写入用 PUT）。
+- **移除**：详情页「上一 / 下一作品」按钮——JSON 详情快照不含 `prev_id` / `next_id`，
+  那是 HTML 页面才有的字段，按钮永远不会出现。后续用列表上下文推导（见待办）。
+- **已知限制**：重获元数据 / 打包与重新打包 / 要求修订 / 按来源拉取原档在 `/api/v1`
+  还没有端点，App 内渲染为禁用并说明原因（清单见 `AgentHelp/CONTRACT.md` §7）。
 
 ## v0.2.0（未发布）
 

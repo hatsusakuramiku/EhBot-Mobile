@@ -73,6 +73,6 @@ void main() {
       MockClient((http.Request request) async =>
           errorResponse('NOT_FOUND', status: 404, message: 'no route')),
     );
-    expect(find.textContaining('B-M8'), findsOneWidget);
+    expect(find.textContaining('后端还没有'), findsOneWidget);
   });
 }
