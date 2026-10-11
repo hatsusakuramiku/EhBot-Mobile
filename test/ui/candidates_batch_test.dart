@@ -112,4 +112,57 @@ void main() {
     expect(batches, isNotEmpty);
     expect(batches.first, contains('"action":"approve"'));
   });
+
+  testWidgets('多选彻底删除走 delete-files，两个入口文案不同', (WidgetTester tester) async {
+    final List<String> batches = <String>[];
+    final http.Client client = fakeBackend(
+      onRequest: (http.Request request) {
+        if (request.url.path.endsWith('/candidates/batch')) {
+          batches.add(request.body);
+        }
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CandidatesPage(
+            api: apiWith(client),
+            thumbnails: thumbnailsWith(client),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(
+      find.byKey(const ValueKey<String>('candidate-11')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('candidate-batch-delete')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('压缩包与已归档的 CBZ 保留'), findsOneWidget);
+    // 取消不会发请求。
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('取消'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(batches, isEmpty);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('candidate-batch-delete-files')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('还会删除已下载的压缩包'), findsOneWidget);
+    await tester.tap(find.text('确认删除文件'));
+    await tester.pumpAndSettle();
+
+    expect(batches.single, contains('"action":"delete-files"'));
+    expect(batches.single, contains('"candidate_ids":[11]'));
+  });
 }

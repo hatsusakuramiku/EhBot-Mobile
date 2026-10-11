@@ -45,7 +45,14 @@ void main() {
       tester,
       MockClient((http.Request request) async {
         if (request.url.path.contains('/candidates/manual')) {
-          return jsonResponse(<String, Object?>{'existing_candidate_id': '7'});
+          // 后端把重复报成 409 `CANDIDATE_DUPLICATE`（EhBot R66），
+          // 已有候选 id 在 error.details 里。
+          return errorResponse(
+            'CANDIDATE_DUPLICATE',
+            status: 409,
+            message: '作品已存在：候选 #7',
+            details: <String, Object?>{'existing_candidate_id': 7},
+          );
         }
         return http.Response('{}', 404);
       }),

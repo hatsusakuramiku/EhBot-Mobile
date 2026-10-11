@@ -116,11 +116,14 @@ class _ManualAddPageState extends State<ManualAddPage> {
             ),
             if (result.isDuplicate) ...<Widget>[
               const SizedBox(height: EhSpacing.m),
-              FilledButton.tonal(
-                key: const ValueKey<String>('manual-open-existing'),
-                onPressed: () => _openExisting(result.existingCandidateId!),
-                child: Text('查看已有候选 #${result.existingCandidateId}'),
-              ),
+              if (result.existingCandidateId != null)
+                FilledButton.tonal(
+                  key: const ValueKey<String>('manual-open-existing'),
+                  onPressed: () => _openExisting(result.existingCandidateId!),
+                  child: Text('查看已有候选 #${result.existingCandidateId}'),
+                )
+              else
+                const Text('后端只说重复，没有给出已有候选的 id；可在候选列表里按标题找。'),
             ],
           ],
           const SizedBox(height: EhSpacing.l),

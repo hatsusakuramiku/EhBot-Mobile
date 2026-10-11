@@ -13,8 +13,10 @@ import 'widgets/cover_thumb.dart';
 import 'widgets/eh_card.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/error_view.dart';
+import 'widgets/job_actions.dart';
 import 'widgets/large_title_app_bar.dart';
 import 'widgets/search_bar.dart';
+import 'widgets/selection_bar.dart';
 import 'widgets/tone_chip.dart';
 
 /// 候选 tab（`CANDIDATE_TABS`）→ 中文标签。
@@ -205,6 +207,58 @@ class _CandidatesPageState extends State<CandidatesPage> {
     }
   }
 
+  /// 彻底删除选中的候选；[deleteFiles] 为真时连压缩包与 CBZ 一起删。
+  ///
+  /// 与通过 / 驳回同一个端点（后端按 `delete` / `delete-files` 分派），
+  /// 两次确认的文案不同——「删不删文件」必须在按下的那个按钮上看得出来。
+  Future<void> _batchDelete({required bool deleteFiles}) async {
+    if (_selected.isEmpty || _batchBusy) {
+      return;
+    }
+    final bool ok = await confirmDialog(
+      context,
+      title: deleteFiles ? '彻底删除并删除文件' : '彻底删除选中的作品',
+      message: deleteFiles
+          ? '除候选的全部记录外，还会删除已下载的压缩包与已归档的 CBZ；此操作不可恢复。'
+          : '候选记录、消息、元数据与审核历史都会删除，已下载的压缩包与已归档的 CBZ 保留；'
+                '此操作不可恢复。',
+      confirmLabel: deleteFiles ? '确认删除文件' : '确认彻底删除',
+    );
+    if (!ok || !mounted) {
+      return;
+    }
+    setState(() => _batchBusy = true);
+    try {
+      final ReviewBatchResult result = await widget.api.deleteCandidates(
+        candidateIds: _selected.toList(),
+        deleteFiles: deleteFiles,
+      );
+      if (!mounted) {
+        return;
+      }
+      final String message = result.skipped.isEmpty
+          ? '已删除 ${result.applied} 个候选。'
+          : '已删除 ${result.applied} 个；${result.skipped.length} 个被跳过：'
+                '${result.skipped.first}';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      _clearSelection();
+      await _reload();
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(describeError(error))));
+    } finally {
+      if (mounted) {
+        setState(() => _batchBusy = false);
+      }
+    }
+  }
+
   Future<void> _openDetail(Candidate candidate) async {
     if (_selected.isNotEmpty) {
       _toggleSelection(candidate);
@@ -250,44 +304,47 @@ class _CandidatesPageState extends State<CandidatesPage> {
     ),
   );
 
-  Widget _selectionBar(BuildContext context) => Material(
-    elevation: 3,
-    color: Theme.of(context).colorScheme.surfaceContainerHigh,
-    child: SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: EhSpacing.l,
-          vertical: EhSpacing.s,
-        ),
-        child: Row(
-          children: <Widget>[
-            Expanded(child: Text('已选 ${_selected.length} 个')),
-            TextButton(
-              key: const ValueKey<String>('candidate-batch-cancel'),
-              onPressed: _batchBusy ? null : _clearSelection,
-              child: const Text('取消'),
-            ),
-            const SizedBox(width: EhSpacing.s),
-            FilledButton(
-              key: const ValueKey<String>('candidate-batch-approve'),
-              onPressed: _batchBusy
-                  ? null
-                  : () => unawaited(_batchReview('approve')),
-              child: const Text('通过'),
-            ),
-            const SizedBox(width: EhSpacing.s),
-            OutlinedButton(
-              key: const ValueKey<String>('candidate-batch-reject'),
-              onPressed: _batchBusy
-                  ? null
-                  : () => unawaited(_batchReview('reject')),
-              child: const Text('驳回'),
-            ),
-          ],
-        ),
+  Widget _selectionBar(BuildContext context) => SelectionBar(
+    count: _selected.length,
+    busy: _batchBusy,
+    clearKey: const ValueKey<String>('candidate-batch-cancel'),
+    onClear: _clearSelection,
+    actions: <Widget>[
+      FilledButton(
+        key: const ValueKey<String>('candidate-batch-approve'),
+        onPressed: _batchBusy
+            ? null
+            : () => unawaited(_batchReview('approve')),
+        child: const Text('通过'),
       ),
-    ),
+      OutlinedButton(
+        key: const ValueKey<String>('candidate-batch-reject'),
+        onPressed: _batchBusy
+            ? null
+            : () => unawaited(_batchReview('reject')),
+        child: const Text('驳回'),
+      ),
+      OutlinedButton(
+        key: const ValueKey<String>('candidate-batch-delete'),
+        onPressed: _batchBusy
+            ? null
+            : () => unawaited(_batchDelete(deleteFiles: false)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error,
+        ),
+        child: const Text('彻底删除'),
+      ),
+      OutlinedButton(
+        key: const ValueKey<String>('candidate-batch-delete-files'),
+        onPressed: _batchBusy
+            ? null
+            : () => unawaited(_batchDelete(deleteFiles: true)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error,
+        ),
+        child: const Text('彻底删除并删文件'),
+      ),
+    ],
   );
 
   Widget _filterBar(BuildContext context) => Padding(

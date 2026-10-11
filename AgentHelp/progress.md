@@ -456,3 +456,26 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 184 / 0 failed（177 + 7）。
 - 文档：`AgentHelp/PHASES.md`、`README.md`、`CHANGELOG.md`。
 - 状态：**已落地**；下一步 M9-F（候选删除 + 手动添加）。
+
+## M9-F · 2026-10-11 · 候选多选删除 + 手动添加更正（基线 184 → 187）
+
+- 版本：Flutter 3.47.6 stable；App v0.3.0。
+- 测试基线：`187 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：**已就绪**——R64（`candidates/batch` 的 `delete` / `delete-files`）、
+  R66（`candidates/manual` 重复回 409 + `details.existing_candidate_id`）。
+- 改动：
+  - `lib/ui/candidates_page.dart`：多选条改用共享 `SelectionBar`（行为不变），
+    新增**彻底删除 / 彻底删除并删文件**两个入口——走 `candidates/batch` 的
+    `delete` / `delete-files`，两次**不同**的确认文案；能否删由服务端判定，
+    被拒的按 `skipped` 提示原因。
+  - `lib/ui/manual_add_page.dart`：重复分支改按 409 语义渲染；后端没给出
+    `existing_candidate_id` 时给一句话说明，而不是崩在 `!` 上。
+  - 测试：`candidates_batch_test.dart` +1（两个删除入口与文案、取消不发请求）；
+    `manual_add_page_test.dart` 的重复用例改打真实的 409 信封。
+- 未做（记录在案）：候选**列表行**的「重新排队」入口。列表端点的
+  `candidate_summary.actions` 只有 `approve` / `reject`（核对 `serializers.py`），
+  没有 `requeue`；不为了一个行按钮给整页加 N 次详情读取。详情页的重新排队
+  已经按 `actions.requeue` 工作。
+- 验证：`flutter analyze` 零告警；`flutter test` → 187 / 0 failed（184 + 3）。
+- 文档：`AgentHelp/PHASES.md`、`README.md`、`CHANGELOG.md`。
+- 状态：**已落地**；M9 只剩 M9-E（设置页）。
