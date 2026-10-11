@@ -7,6 +7,7 @@ import '../api/models.dart';
 import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
+import 'theme.dart';
 import 'widgets/eh_card.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/error_view.dart';
@@ -180,31 +181,52 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
         ),
       ];
     }
+    final int columns = ehColumnsForWidth(MediaQuery.sizeOf(context).width);
+    if (columns > 1) {
+      return <Widget>[
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: 180,
+            ),
+            itemCount: _items.length,
+            itemBuilder: (BuildContext context, int index) =>
+                RepaintBoundary(child: _tile(_items[index])),
+          ),
+        ),
+        if (_hasMore) _loadMoreSliver(),
+      ];
+    }
     return <Widget>[
       SliverList.builder(
         itemCount: _items.length,
         itemBuilder: (BuildContext context, int index) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: _tile(_items[index]),
+          child: RepaintBoundary(child: _tile(_items[index])),
         ),
       ),
-      if (_hasMore)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : OutlinedButton(
-                      key: const ValueKey<String>('downloaded-load-more'),
-                      onPressed: _loadMore,
-                      child: const Text('加载更多'),
-                    ),
-            ),
-          ),
-        ),
+      if (_hasMore) _loadMoreSliver(),
     ];
   }
+
+  Widget _loadMoreSliver() => SliverToBoxAdapter(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: _loading
+            ? const CircularProgressIndicator()
+            : OutlinedButton(
+                key: const ValueKey<String>('downloaded-load-more'),
+                onPressed: _loadMore,
+                child: const Text('加载更多'),
+              ),
+      ),
+    ),
+  );
 
   Widget _tile(DownloadedWork work) => EhCard(
     key: ValueKey<String>('downloaded-${work.candidateId}'),

@@ -37,6 +37,22 @@ abstract final class EhBreakpoints {
   static const double expanded = 1200;
 }
 
+/// 按屏宽给网格列数：< 600 手机 1 列、≥ 600 大手机 2 列、≥ 840 平板/桌面 3 列。
+int ehColumnsForWidth(
+  double width, {
+  int narrow = 1,
+  int wide = 2,
+  int extraWide = 3,
+}) {
+  if (width >= EhBreakpoints.medium) {
+    return extraWide;
+  }
+  if (width >= EhBreakpoints.compact) {
+    return wide;
+  }
+  return narrow;
+}
+
 /// 应用主题。浅 / 深双轨，Seed 粉红 `0xFFE91E63`（EH 类内容的强调色偏好）。
 class AppTheme {
   /// Seed color。

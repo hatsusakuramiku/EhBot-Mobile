@@ -17,7 +17,8 @@ class MetricStrip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: EhSpacing.l),
         itemCount: items.length,
         separatorBuilder: (_, _) => const SizedBox(width: EhSpacing.m),
-        itemBuilder: (BuildContext context, int i) => items[i],
+        itemBuilder: (BuildContext context, int i) =>
+            RepaintBoundary(child: items[i]),
       ),
     );
   }

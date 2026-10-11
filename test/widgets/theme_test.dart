@@ -38,5 +38,14 @@ void main() {
       expect(EhAnim.medium.inMilliseconds, 250);
       expect(EhBreakpoints.expanded, 1200);
     });
+
+    test('ehColumnsForWidth follows the three breakpoints', () {
+      expect(ehColumnsForWidth(360), 1); // 手机竖屏
+      expect(ehColumnsForWidth(599), 1);
+      expect(ehColumnsForWidth(600), 2); // 大手机 / 平板
+      expect(ehColumnsForWidth(839), 2);
+      expect(ehColumnsForWidth(840), 3); // 平板横 / 桌面
+      expect(ehColumnsForWidth(2000), 3);
+    });
   });
 }

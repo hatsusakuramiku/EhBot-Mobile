@@ -1,7 +1,7 @@
 # 阶段索引
 
 > **先读这份**。每条一行摘要 + `progress.md` 的行号指针；要细节再下钻。
-> 基线链（移动端）：**M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 → M6 = 105 → M7-A = 132 tests / 0 failed**
+> 基线链（移动端）：**M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 → M6 = 105 → M7 = 140 tests / 0 failed**
 > （`flutter analyze` 零告警）。后端基线在 EhBot 仓库，与本仓库分开记。
 
 ## 一、后端依赖（在 EhBot 仓库实施，本仓库只依赖）
@@ -26,7 +26,7 @@
 | M7-A | 主题 + 设计 token + 13 个新组件 + 组件测试 | **完成**（基线 `132 tests / 0 failed`） | `progress.md` M7-A |
 | M7-B | 七页重写（工作台 / 候选 / 活动 / 已下载 / 详情 / 设置 / 登录） | **完成**（契约零破坏，基线仍 132） | `progress.md` M7-B |
 | M7-C | 多服务器数据层 + 启动迁移 | **完成**（基线 138） | `progress.md` M7-C |
-| M7-D | 动效与响应式打磨（`RepaintBoundary` / 三断点 / 黄金截图） | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §7 |
+| M7-D | 响应式断点 + `RepaintBoundary`（黄金截图改可移植断言，见 `progress.md`） | **完成**（基线 140） | `progress.md` M7-D |
 | M8-A | 多服务器 UI（选择 / 编辑 / 切换） | 待实施 | `M8_FEATURE_REPLICATION_PROPOSAL.md` §7 |
 | M8-B | 后端契约（EhBot 仓库 `B-M8`，本仓只改 `CONTRACT.md`） | 待实施 | 同上 §4.2 |
 | M8-C | Manual Add + Dedup | 待实施 | 同上 §7 |

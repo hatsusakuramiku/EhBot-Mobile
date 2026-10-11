@@ -215,3 +215,25 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 138 / 0 failed（M7-B 的 132 + 新增 6）。
 - 文档：`AgentHelp/PHASES.md`（M7-C 状态）。
 - 状态：**已落地并提交**；下一步 M7-D（动效 + 响应式打磨）。
+
+## M7-D · 2026-10-11 · 响应式断点 + RepaintBoundary（M7 收尾，基线 138 → 140）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`140 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：不变。
+- 改动：
+  - `lib/ui/theme.dart`：新增 `ehColumnsForWidth(width)`——< 600 → 1 列、≥ 600 → 2 列、
+    ≥ 840 → 3 列。
+  - `lib/ui/candidates_page.dart` / `lib/ui/downloaded_page.dart`：窄屏 `SliverList`、
+    宽屏 `SliverGrid`；每张卡套 `RepaintBoundary`（隔离封面重绘）。
+  - `lib/ui/widgets/metric_strip.dart`：条目套 `RepaintBoundary`。
+  - `test/widgets/theme_test.dart`：补 `ehColumnsForWidth` 三断点断言。
+  - `test/ui/responsive_layout_test.dart`（新增）：窄屏用列表、宽屏用网格。
+- 验证：`flutter analyze` 零告警；`flutter test` → 140 / 0 failed（138 + 2）。
+  - 修复途中发现的真 bug：宽屏网格单元高度不足触发 `RenderFlex overflowed`
+    （候选 116 → 160、已下载 132 → 180，并给内层 `Column` 加 `mainAxisSize.min`）。
+- 偏差记录：提案 §7.4 提到的**黄金截图未落地**。黄金 PNG 对渲染后端 / 平台字体敏感，
+  在本机通过不代表运营者机器与 CI 通过，会引入假红；改用「组件渲染 + 交互 + 断点列数」
+  的可移植断言代替。若运营者要黄金基线，可另开一期，并配 `--update-goldens` 指引。
+- 文档：`AgentHelp/PHASES.md`（M7-D 完成，M7 整体收尾）。
+- 状态：**M7 全部四个子阶段完成**（基线 105 → 140，契约零破坏）。

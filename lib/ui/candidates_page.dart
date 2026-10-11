@@ -7,6 +7,7 @@ import '../api/models.dart';
 import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
+import 'theme.dart';
 import 'widgets/cover_thumb.dart';
 import 'widgets/eh_card.dart';
 import 'widgets/empty_state.dart';
@@ -269,31 +270,53 @@ class _CandidatesPageState extends State<CandidatesPage> {
         ),
       ];
     }
+    final int columns = ehColumnsForWidth(MediaQuery.sizeOf(context).width);
+    if (columns > 1) {
+      return <Widget>[
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: 160,
+            ),
+            itemCount: _items.length,
+            itemBuilder: (BuildContext context, int index) => RepaintBoundary(
+              child: _candidateCard(_items[index]),
+            ),
+          ),
+        ),
+        if (_page < _pages) _loadMoreSliver(),
+      ];
+    }
     return <Widget>[
       SliverList.builder(
         itemCount: _items.length,
         itemBuilder: (BuildContext context, int index) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: _candidateCard(_items[index]),
+          child: RepaintBoundary(child: _candidateCard(_items[index])),
         ),
       ),
-      if (_page < _pages)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : OutlinedButton(
-                      key: const ValueKey<String>('candidate-load-more'),
-                      onPressed: _loadMore,
-                      child: const Text('加载更多'),
-                    ),
-            ),
-          ),
-        ),
+      if (_page < _pages) _loadMoreSliver(),
     ];
   }
+
+  Widget _loadMoreSliver() => SliverToBoxAdapter(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: _loading
+            ? const CircularProgressIndicator()
+            : OutlinedButton(
+                key: const ValueKey<String>('candidate-load-more'),
+                onPressed: _loadMore,
+                child: const Text('加载更多'),
+              ),
+      ),
+    ),
+  );
 
   Widget _candidateCard(Candidate candidate) {
     final CoverRef? cover = candidate.cover;
@@ -314,6 +337,7 @@ class _CandidatesPageState extends State<CandidatesPage> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
