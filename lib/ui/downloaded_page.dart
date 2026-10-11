@@ -4,15 +4,23 @@ import 'package:flutter/material.dart';
 
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
+import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
+import 'candidate_detail_page.dart';
 import 'widgets/error_view.dart';
 import 'widgets/status_chip.dart';
 
 /// 已下载列表：搜索 + 加载更多。
 class DownloadedListPage extends StatefulWidget {
-  const DownloadedListPage({super.key, required this.api, this.monitor});
+  const DownloadedListPage({
+    super.key,
+    required this.api,
+    required this.thumbnails,
+    this.monitor,
+  });
 
   final EhBotApi api;
+  final ThumbnailLoader thumbnails;
   final LiveMonitor? monitor;
 
   @override
@@ -167,34 +175,63 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
     );
   }
 
-  Widget _tile(DownloadedWork work) => ListTile(
-    key: ValueKey<String>('downloaded-${work.candidateId}'),
-    title: Text(
-      work.displayTitle,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    ),
-    subtitle: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        if (work.artist.isNotEmpty) Text(work.artist),
-        const SizedBox(height: 4),
-        Row(
-          children: <Widget>[
-            StatusChip(status: work.state),
-            if (work.packLabel.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(work.packLabel),
-              ),
-            if (work.providerLabel.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(work.providerLabel),
-              ),
-          ],
-        ),
-      ],
-    ),
-  );
+  Widget _tile(DownloadedWork work) {
+    return ListTile(
+      key: ValueKey<String>('downloaded-${work.candidateId}'),
+      onTap: () => unawaited(_openDetail(work)),
+      title: Text(
+        work.displayTitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (work.artist.isNotEmpty) Text(work.artist),
+          const SizedBox(height: 4),
+          Row(
+            children: <Widget>[
+              StatusChip(status: work.state),
+              if (work.packLabel.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(work.packLabel),
+                ),
+              if (work.providerLabel.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(work.providerLabel),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openDetail(DownloadedWork work) async {
+    final Candidate stub = Candidate(
+      id: work.candidateId,
+      title: work.title,
+      artist: work.artist,
+      category: work.category,
+      language: work.language,
+      tags: work.tags,
+      status: work.state,
+    );
+    final bool changed =
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (BuildContext _) => CandidateDetailPage(
+              api: widget.api,
+              thumbnails: widget.thumbnails,
+              candidate: stub,
+            ),
+          ),
+        ) ??
+        false;
+    if (changed) {
+      _reload();
+    }
+  }
 }

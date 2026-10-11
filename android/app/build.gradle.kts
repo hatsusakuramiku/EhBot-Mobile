@@ -36,6 +36,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Per-ABI splits + a universal APK, so a single `flutter build apk --release`
+    // produces app-arm64-v8a-release.apk / app-armeabi-v7a-release.apk /
+    // app-x86_64-release.apk / app-release.apk (universal) with platform in the
+    // filename (M6 follow-up).
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = true
+        }
+    }
 }
 
 kotlin {

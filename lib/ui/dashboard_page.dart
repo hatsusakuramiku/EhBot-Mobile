@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
 import '../state/live_monitor.dart';
+import '../media/thumbnail_loader.dart';
+import 'candidate_detail_page.dart';
 import 'widgets/async_view.dart';
 import 'widgets/status_chip.dart';
 
@@ -23,12 +25,28 @@ const Map<String, String> kCandidateCountLabels = <String, String>{
 
 /// 工作台：候选计数、活动概况、需干预清单。
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key, required this.api, this.monitor});
+  const DashboardPage({
+    super.key,
+    required this.api,
+    required this.thumbnails,
+    this.monitor,
+    this.candidatesTab,
+    this.onOpenCandidates,
+  });
 
   final EhBotApi api;
+  final ThumbnailLoader thumbnails;
 
   /// 实时监视器；tick 到来时自动刷新。
   final LiveMonitor? monitor;
+
+  /// Shared with [CandidatesPage]. Dashboard chips update it; the candidates
+  /// tab strip listens so the two views agree on the active filter (M6).
+  final ValueNotifier<String>? candidatesTab;
+
+  /// Jump straight to the candidates list with the given sub-tab. Wired by
+  /// [HomeShell] so the bottom-nav destination changes at the same time.
+  final ValueChanged<String>? onOpenCandidates;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -103,11 +121,20 @@ class _DashboardPageState extends State<DashboardPage> {
               runSpacing: 8,
               children: <Widget>[
                 for (final MapEntry<String, int> entry in counts)
-                  Chip(
-                    label: Text(
-                      '${kCandidateCountLabels[entry.key] ?? entry.key} ${entry.value}',
+                  if (widget.onOpenCandidates != null)
+                    ActionChip(
+                      key: ValueKey<String>('dashboard-chip-${entry.key}'),
+                      label: Text(
+                        '${kCandidateCountLabels[entry.key] ?? entry.key} ${entry.value}',
+                      ),
+                      onPressed: () => widget.onOpenCandidates!(entry.key),
+                    )
+                  else
+                    Chip(
+                      label: Text(
+                        '${kCandidateCountLabels[entry.key] ?? entry.key} ${entry.value}',
+                      ),
                     ),
-                  ),
               ],
             ),
             _sectionTitle(context, '活动'),
@@ -142,22 +169,45 @@ class _DashboardPageState extends State<DashboardPage> {
               const Text('暂无需要注意的任务。')
             else
               for (final JobSummary job in summary.attentionItems)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(job.displayTitle),
-                  subtitle: Text(
-                    job.errorMessage.isEmpty
-                        ? job.state.label
-                        : '${job.state.label} · ${job.errorMessage}',
+                Builder(
+                  builder: (BuildContext ctx) => ListTile(
+                    key: ValueKey<String>('dashboard-attn-${job.id}'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(job.displayTitle),
+                    subtitle: Text(
+                      job.errorMessage.isEmpty
+                          ? job.state.label
+                          : '${job.state.label} · ${job.errorMessage}',
+                    ),
+                    trailing: StatusChip(status: job.state),
+                    onTap: job.candidateId.isEmpty
+                        ? null
+                        : () => _openAttention(ctx, job.candidateId),
                   ),
-                  trailing: StatusChip(status: job.state),
                 ),
           ],
         );
       },
     ),
   );
+
+  Future<void> _openAttention(BuildContext context, String candidateId) async {
+    final bool changed =
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (BuildContext _) => CandidateDetailPage(
+              api: widget.api,
+              thumbnails: widget.thumbnails,
+              candidate: Candidate(id: candidateId, title: ''),
+            ),
+          ),
+        ) ??
+        false;
+    if (changed) {
+      _reload();
+    }
+  }
 
   Widget _sectionTitle(BuildContext context, String text) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 8),

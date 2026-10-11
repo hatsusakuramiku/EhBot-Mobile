@@ -1,18 +1,24 @@
 import 'package:ehbot_mobile/api/ehbot_api.dart';
+import 'package:ehbot_mobile/media/thumbnail_loader.dart';
 import 'package:ehbot_mobile/ui/dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 
 import '../support/api_harness.dart';
 import '../support/http_stubs.dart';
 
 void main() {
   testWidgets('工作台渲染候选计数、活动与需干预', (WidgetTester tester) async {
-    final EhBotApi api = apiWith(fakeBackend());
+    final http.Client client = fakeBackend();
+    final EhBotApi api = apiWith(client);
+    final ThumbnailLoader thumbnails = thumbnailsWith(client);
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: DashboardPage(api: api)),
+        home: Scaffold(
+          body: DashboardPage(api: api, thumbnails: thumbnails),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -26,11 +32,15 @@ void main() {
   });
 
   testWidgets('工作台请求失败时给中文错误与重试', (WidgetTester tester) async {
-    final EhBotApi api = apiWith(fakeBackendFailure());
+    final http.Client client = fakeBackendFailure();
+    final EhBotApi api = apiWith(client);
+    final ThumbnailLoader thumbnails = thumbnailsWith(client);
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: DashboardPage(api: api)),
+        home: Scaffold(
+          body: DashboardPage(api: api, thumbnails: thumbnails),
+        ),
       ),
     );
     await tester.pumpAndSettle();

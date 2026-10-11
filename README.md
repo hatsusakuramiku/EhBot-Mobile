@@ -24,7 +24,25 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 质量门禁（本地与 CI 同一套，Flutter 锁定 3.47.6）：
 
     flutter analyze  # 要求零告警
-    flutter test     # 当前基线 90 tests / 0 failed
+    flutter test     # 当前基线 105 tests / 0 failed
+
+发布（Android）：一次出 4 份 APK，目标平台在文件名里。需要在 `android/app/build.gradle.kts` 里开 `splits.abi` + `universalApk = true`（M6 follow-up）：
+
+```
+flutter build apk --release
+# 输出：
+#   app-arm64-v8a-release.apk     (~18 MB)
+#   app-armeabi-v7a-release.apk   (~16 MB)
+#   app-x86_64-release.apk        (~20 MB)
+#   app-release.apk               (~53 MB, universal)
+```
+
+Google Play 分发用 `.aab`：
+
+```
+flutter build appbundle --release
+# 输出 app-release.aab，Play 商店会按设备 ABI 自动分发拆分包
+```
 
 ## 使用
 
@@ -36,10 +54,21 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 - **活动**：下载 / 打包队列按后端分组展示 + 已完成历史（本期只读）。
 - **已下载**：搜索 + 加载更多；显示状态与打包状态。
 
+- **设置**（AppBar 右上角图标）：只读列出账号、服务器 URL、外部服务连接状态、启动警告与退出登录；详细信息改动在 `MOBILE.md` §2.2 以后的版本提供。
 **实时**：客户端优先消费 `/api/v1/events`（SSE，带 `Authorization` 头）；
 断流会按 `/api/v1/meta` 的 `polling.interval_ms` 自动回退轮询，并周期性重试恢复。
 回退期间顶部会出现「实时连接已断开，已回退轮询」横幅，可手动重试；各页面在每次
 实时 tick 到来时自动刷新。
+
+## 作品详情与动作
+
+点开任何页面中的候选/作品行都会打开详情页。详情页含：
+
+- 左侧封面缩略图（如果候选传了 cover hash） + 右侧标题 + 状态/阶段 chip + 作者/分类/语言/标签
+- 元数据列表与时间线（M3 原有）
+- **上一作品 / 下一作品**按钮：后端返回 `prev_id` / `next_id` 时出现，点击刈换同一页面的作品
+- **动作按钮**：通过/驳回总是出现；重获元数据/重新打包/重新转换/切至 EH/切至 Telegram/重排队/需修订/转换/轻度删除/底度删除 只在后端返回 `actions` 中对应名称为 true 时才渲染；删除类需双确认。该列表会随后端升级自动扩展。
+- 所有动作调用 `/api/v1/jobs/{id}/{action}`；错误走 `describeError`、成功走 `SnackBar` + 列表自动刷新
 
 ## 登录
 

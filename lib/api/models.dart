@@ -294,6 +294,7 @@ class QueueSnapshot {
 }
 
 /// 工作台概览（`GET /api/v1/summary`）。
+/// 工作台概览（`GET /api/v1/summary`）。
 class Summary {
   const Summary({
     this.candidateCounts = const <String, int>{},
@@ -303,6 +304,7 @@ class Summary {
     this.attentionTotal = 0,
     this.attentionItems = const <JobSummary>[],
     this.startupErrors = const <String>[],
+    this.connections = const <String, ConnectionInfo>{},
   });
 
   factory Summary.fromJson(Map<String, dynamic> json) {
@@ -318,6 +320,7 @@ class Summary {
           .map(JobSummary.fromJson)
           .toList(),
       startupErrors: asStringList(json['startup_errors']),
+      connections: _parseConnections(json['connections']),
     );
   }
 
@@ -328,9 +331,44 @@ class Summary {
   final int attentionTotal;
   final List<JobSummary> attentionItems;
   final List<String> startupErrors;
+  final Map<String, ConnectionInfo> connections;
 }
 
-/// 已下载内容（`downloaded_work`）。
+/// 一条外部连接：Telegram / ExHentai。
+class ConnectionInfo {
+  const ConnectionInfo({
+    this.label = '',
+    this.identity,
+    this.state = const StatusView(code: '', label: ''),
+  });
+
+  factory ConnectionInfo.fromJson(Map<String, dynamic> json) => ConnectionInfo(
+    label: asString(json['label']),
+    identity: asStringOrNull(json['identity']),
+    state: StatusView.fromJson(json['state']),
+  );
+
+  final String label;
+  final String? identity;
+  final StatusView state;
+}
+
+Map<String, ConnectionInfo> _parseConnections(Object? raw) {
+  final Map<String, dynamic>? map = asMap(raw);
+  if (map == null) return const <String, ConnectionInfo>{};
+  return <String, ConnectionInfo>{
+    for (final MapEntry<String, dynamic> entry in map.entries)
+      entry.key: ConnectionInfo.fromJson(
+        asMap(entry.value) ?? const <String, dynamic>{},
+      ),
+  };
+}
+
+String? asStringOrNull(Object? value) {
+  if (value is! String || value.isEmpty) return null;
+  return value;
+}
+
 class DownloadedWork {
   const DownloadedWork({
     required this.candidateId,
@@ -452,10 +490,18 @@ class WorkDetail {
     this.title = '',
     this.status = const StatusView(code: '', label: ''),
     this.stage = const StatusView(code: '', label: ''),
+    this.artist = '',
+    this.category = '',
+    this.language = '',
+    this.tags = const <String>[],
+    this.cover,
     this.filterReason = '',
     this.cbzPath = '',
     this.metadata = const <MetadataEntry>[],
     this.timeline = const <TimelineEntry>[],
+    this.actions = const <String, bool>{},
+    this.prevId,
+    this.nextId,
     this.jobCount = 0,
     this.live = false,
   });
@@ -465,10 +511,18 @@ class WorkDetail {
     title: asString(json['title']),
     status: StatusView.fromJson(json['status']),
     stage: StatusView.fromJson(json['stage']),
+    artist: asString(json['artist']),
+    category: asString(json['category']),
+    language: asString(json['language']),
+    tags: asStringList(json['tags']),
+    cover: CoverRef.fromJson(json['cover']),
     filterReason: asString(json['filter_reason']),
     cbzPath: asString(asMap(json['archive'])?['path']),
     metadata: asMapList(json['metadata']).map(MetadataEntry.fromJson).toList(),
     timeline: asMapList(json['timeline']).map(TimelineEntry.fromJson).toList(),
+    actions: _workActionMap(json['actions']),
+    prevId: _nullableString(json['prev_id']),
+    nextId: _nullableString(json['next_id']),
     jobCount: asMapList(json['jobs']).length,
     live: asBool(json['live']),
   );
@@ -477,17 +531,43 @@ class WorkDetail {
   final String title;
   final StatusView status;
   final StatusView stage;
+  final String artist;
+  final String category;
+  final String language;
+  final List<String> tags;
+  final CoverRef? cover;
   final String filterReason;
   final String cbzPath;
   final List<MetadataEntry> metadata;
   final List<TimelineEntry> timeline;
+  final Map<String, bool> actions;
+  final String? prevId;
+  final String? nextId;
   final int jobCount;
   final bool live;
 
-  String get displayTitle => title.isEmpty ? '候选 #$id' : title;
+  String get displayTitle => title.isEmpty ? 'work #$id' : title;
+
+  /// True only when the backend explicitly says the named action is allowed.
+  bool can(String name) => actions[name] ?? false;
 }
 
-/// `POST /api/v1/candidates/batch` 的结果：逐条成功 / 跳过，不因一条失败全批失败。
+/// Parse the flat `actions` block on a work into `name -> bool` (M6).
+Map<String, bool> _workActionMap(Object? raw) {
+  final Map<String, dynamic>? map = asMap(raw);
+  if (map == null) return const <String, bool>{};
+  return <String, bool>{
+    for (final MapEntry<String, dynamic> entry in map.entries)
+      entry.key: asBool(entry.value),
+  };
+}
+
+/// Empty string collapses to null so missing keys are indistinguishable from blanks.
+String? _nullableString(Object? value) {
+  if (value is! String || value.isEmpty) return null;
+  return value;
+}
+
 class ReviewBatchResult {
   const ReviewBatchResult({
     required this.requested,

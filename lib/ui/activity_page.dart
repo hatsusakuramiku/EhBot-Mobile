@@ -4,15 +4,23 @@ import 'package:flutter/material.dart';
 
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
+import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
+import 'candidate_detail_page.dart';
 import 'widgets/async_view.dart';
 import 'widgets/status_chip.dart';
 
 /// 活动：下载 / 打包队列快照 + 已完成历史（MVP 只读）。
 class ActivityPage extends StatefulWidget {
-  const ActivityPage({super.key, required this.api, this.monitor});
+  const ActivityPage({
+    super.key,
+    required this.api,
+    required this.thumbnails,
+    this.monitor,
+  });
 
   final EhBotApi api;
+  final ThumbnailLoader thumbnails;
   final LiveMonitor? monitor;
 
   @override
@@ -120,15 +128,42 @@ class _ActivityPageState extends State<ActivityPage> {
     ),
   );
 
-  Widget _jobTile(JobSummary job) => ListTile(
-    dense: true,
-    contentPadding: EdgeInsets.zero,
-    title: Text(job.displayTitle),
-    subtitle: Text(
-      job.errorMessage.isEmpty
-          ? job.state.label
-          : '${job.state.label} · ${job.errorMessage}',
-    ),
-    trailing: StatusChip(status: job.state),
-  );
+  Widget _jobTile(JobSummary job) {
+    final bool hasCandidateId = job.candidateId.isNotEmpty;
+    return ListTile(
+      key: ValueKey<String>('activity-job-${job.id}'),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(job.displayTitle),
+      subtitle: Text(
+        job.errorMessage.isEmpty
+            ? job.state.label
+            : '${job.state.label} · ${job.errorMessage}',
+      ),
+      trailing: StatusChip(status: job.state),
+      onTap: hasCandidateId ? () => unawaited(_openDetail(job)) : null,
+    );
+  }
+
+  Future<void> _openDetail(JobSummary job) async {
+    final Candidate stub = Candidate(
+      id: job.candidateId,
+      title: job.title,
+      status: job.state,
+    );
+    final bool changed =
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (BuildContext _) => CandidateDetailPage(
+              api: widget.api,
+              thumbnails: widget.thumbnails,
+              candidate: stub,
+            ),
+          ),
+        ) ??
+        false;
+    if (changed) {
+      _reload();
+    }
+  }
 }

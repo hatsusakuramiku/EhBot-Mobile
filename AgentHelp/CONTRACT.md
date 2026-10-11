@@ -102,6 +102,7 @@
 - `/works/{candidate_id}`：详情没有顶层 `artist/category/tags/cover`，正文在
   `metadata`（含 `field_label`/`field_value`/`is_manual`/`is_locked`）、`timeline`
   （含 `action_view.label` / `reason` / `created_at`）、`messages`、`jobs`、`archive`、`actions`。
+  客户端在 M6 后在 `WorkDetail` 模型中预见这些字段；后端未返回时默认空值，按钮不渲染。
 - `/queue`：`{downloads: [{group, count, jobs}], packing: [...], counts:{downloads,packing},
   attention:{total,reasons}, live}`（后端已分好组，客户端不重新分组）。
 - `/history`：`{items: [job_summary], total, limit}`。

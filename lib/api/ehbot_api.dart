@@ -64,6 +64,15 @@ class EhBotApi {
     return asMapList(json['items']).map(JobSummary.fromJson).toList();
   }
 
+  /// Trigger an action on a candidate. Backend may return the updated work;
+  /// we ignore the body for now and let the caller reload.
+  Future<void> jobAction({required String id, required String action}) async {
+    await client.postJson(
+      '/api/v1/jobs/$id/$action',
+      body: const <String, Object?>{},
+    );
+  }
+
   Future<DownloadedPage> downloaded({
     String tab = 'all',
     String search = '',

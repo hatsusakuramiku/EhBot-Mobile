@@ -45,7 +45,11 @@
   （platform `android-36` + `android-35`、build-tools `36.0.0`、platform-tools、
   NDK `28.2.13676358`、CMake `3.22.1`），JDK 21 在 `/opt/java`；
   `~/.bashrc` 已导出 `JAVA_HOME` / `ANDROID_HOME` / `ANDROID_SDK_ROOT` / `PATH`。
-  `flutter build apk --debug` 已验证通过，产物 `build/app/outputs/flutter-apk/app-debug.apk`。
+  `flutter build apk --release
+    # 一次出 app-arm64-v8a-release.apk / app-armeabi-v7a-release.apk / app-x86_64-release.apk
+    # + app-release.apk (universal)，需 `android/app/build.gradle.kts` 里开 splits.abi
+flutter build appbundle --release  # Google Play 使用
+flutter build apk --debug` 已验证通过，产物 `build/app/outputs/flutter-apk/app-debug.apk`。
 - **内存坑（踩过一次，别再踩）**：本机 7.8G 内存、**无 swap**，而 Flutter 模板的
   `android/gradle.properties` 默认 `org.gradle.jvmargs=-Xmx8G`，首次构建会把 Gradle
   daemon OOM 掉（daemon 日志静默截断、无报错，容易误判成卡死）。**不要改仓库里那个值**
@@ -65,7 +69,7 @@
 ## 测试基线
 
 - 约定：`flutter analyze` 零告警；`flutter test` 的用例数作为基线，只增不减。
-- **M5 基线：`90 tests / 0 failed`**（M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90）。
+- **M6 基线：`105 tests / 0 failed`（M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 → M6 = 105）
   以后每期更新，格式「`N tests / 0 failed`」，并同步 `progress.md` 与 `PHASES.md` 的基线链。
 - CI：`.github/workflows/ci.yml` 锁定 Flutter 3.47.6，push / PR 都跑 analyze + test。
 - 后端回归基线（EhBot 侧）当前为 R52 = `1690 collected / 0 failed`；本仓库不改后端。

@@ -212,6 +212,13 @@ Map<String, Object?> workDetailJson() => <String, Object?>{
   ],
   'jobs': <Object>[],
   'archive': null,
+  'artist': '作者A',
+  'category': '同人迷',
+  'language': 'chinese',
+  'tags': <String>['tag1', 'tag2'],
+  'cover': <String, Object?>{'hash': 'hash-a'},
+  'prev_id': '',
+  'next_id': '',
   'actions': <String, Object?>{'approve': true, 'reject': true},
   'live': false,
 };

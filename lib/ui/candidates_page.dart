@@ -28,11 +28,16 @@ class CandidatesPage extends StatefulWidget {
     required this.api,
     required this.thumbnails,
     this.monitor,
+    this.candidatesTab,
   });
 
   final EhBotApi api;
   final ThumbnailLoader thumbnails;
   final LiveMonitor? monitor;
+
+  /// Shared with [DashboardPage]. The dashboard chip updates it; this page
+  /// listens so the two views agree on the active filter (M6).
+  final ValueNotifier<String>? candidatesTab;
 
   @override
   State<CandidatesPage> createState() => _CandidatesPageState();
@@ -57,11 +62,22 @@ class _CandidatesPageState extends State<CandidatesPage> {
     super.initState();
     unawaited(_reload());
     _ticks = widget.monitor?.ticks.listen((int _) => unawaited(_reload()));
+    widget.candidatesTab?.addListener(_onTabFromDashboard);
+  }
+
+  void _onTabFromDashboard() {
+    final String? notifier = widget.candidatesTab?.value;
+    if (notifier == null || notifier == _tab) {
+      return;
+    }
+    setState(() => _tab = notifier);
+    unawaited(_reload());
   }
 
   @override
   void dispose() {
     _ticks?.cancel();
+    widget.candidatesTab?.removeListener(_onTabFromDashboard);
     _searchController.dispose();
     super.dispose();
   }
