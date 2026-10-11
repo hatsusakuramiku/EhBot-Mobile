@@ -13,6 +13,7 @@ import '../api/probe.dart';
 import '../api/token_store.dart';
 import '../media/thumbnail_cache.dart';
 import '../media/thumbnail_loader.dart';
+import 'server_store.dart';
 import 'settings.dart';
 
 /// 应用阶段：决定首屏。
@@ -25,9 +26,11 @@ class AppState extends ChangeNotifier {
     required this.tokenStore,
     required this.clientFactory,
     required this.thumbnailCache,
-  });
+    ServerStore? serverStore,
+  }) : serverStore = serverStore ?? ServerStore();
 
   final SettingsStore settingsStore;
+  final ServerStore serverStore;
   final TokenStore tokenStore;
   final http.Client Function(AppSettings settings) clientFactory;
   final ThumbnailCache thumbnailCache;
@@ -36,6 +39,12 @@ class AppState extends ChangeNotifier {
   AppStage stage = AppStage.loading;
   AuthSession? session;
   WhoAmI? identity;
+
+  /// 已保存的服务器档案；空表示还没配过。
+  List<ServerProfile> servers = const <ServerProfile>[];
+
+  /// 当前选中的档案 id；未选中为 `null`。
+  String? activeServerId;
 
   /// 一次性提示（例如「API Key 已失效，请重新登录」）。
   String? notice;
@@ -55,14 +64,91 @@ class AppState extends ChangeNotifier {
   ThumbnailLoader? get thumbnails => _thumbnails;
   Uri? get baseUri => settings.baseUri;
 
+  /// 当前选中的档案（可能为 `null`——还没配服务器时）。
+  ServerProfile? get activeServer {
+    final String? id = activeServerId;
+    if (id == null) {
+      return null;
+    }
+    for (final ServerProfile p in servers) {
+      if (p.id == id) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   /// 启动：读设置 →（有凭据就恢复会话）→ 决定首屏。
   Future<void> bootstrap() async {
-    settings = await settingsStore.load();
+    await _loadServers();
     if (!settings.isConfigured) {
       _setStage(AppStage.serverSetup);
       return;
     }
     await _restoreSession();
+  }
+
+  /// 读多服务器档案；没有档案时把旧的单服务器设置迁成一份档案（无感升级）。
+  Future<void> _loadServers() async {
+    servers = await serverStore.loadAll();
+    activeServerId = await serverStore.loadActiveId();
+
+    if (servers.isEmpty) {
+      final AppSettings legacy = await settingsStore.load();
+      if (legacy.isConfigured) {
+        final ServerProfile migrated = ServerProfile(
+          id: newServerId(),
+          label: legacy.baseUri?.host ?? '',
+          settings: legacy,
+        );
+        servers = <ServerProfile>[migrated];
+        activeServerId = migrated.id;
+        await serverStore.saveAll(servers);
+        await serverStore.saveActiveId(activeServerId);
+        settings = legacy;
+        return;
+      }
+      settings = const AppSettings();
+      return;
+    }
+
+    ServerProfile? active = activeServer;
+    if (active == null) {
+      // active id 失效（档案被删 / 存储被清）→ 落到第一份，若都没有则空。
+      active = servers.isEmpty ? null : servers.first;
+      activeServerId = active?.id;
+      await serverStore.saveActiveId(activeServerId);
+    }
+    settings = active?.settings ?? const AppSettings();
+  }
+
+  /// 更新（或新建）当前档案的服务器设置。
+  Future<void> _upsertActiveProfile(
+    AppSettings next, {
+    String? label,
+  }) async {
+    final ServerProfile? current = activeServer;
+    final ServerProfile updated;
+    if (current == null) {
+      updated = ServerProfile(
+        id: newServerId(),
+        label: label ?? (next.baseUri?.host ?? ''),
+        settings: next,
+      );
+      servers = <ServerProfile>[...servers, updated];
+      activeServerId = updated.id;
+    } else {
+      updated = current.copyWith(
+        label: label ?? current.label,
+        settings: next,
+      );
+      servers = <ServerProfile>[
+        for (final ServerProfile p in servers)
+          if (p.id == current.id) updated else p,
+      ];
+    }
+    await serverStore.saveAll(servers);
+    await serverStore.saveActiveId(activeServerId);
   }
 
   /// 「测试连接」：用候选设置临时建客户端探测，不落盘。
@@ -93,8 +179,66 @@ class AppState extends ChangeNotifier {
     await tokenStore.clear();
     settings = next;
     await settingsStore.save(next);
+    await _upsertActiveProfile(next);
     notice = null;
     _setStage(next.isConfigured ? AppStage.login : AppStage.serverSetup);
+  }
+
+  /// 切换到另一台服务器（多份档案之一）。凭据按当前服务器单份存放，
+  /// 因此切换等价于先登出、再落到那台服务器的登录页。
+  Future<void> switchServer(String id) async {
+    if (id == activeServerId) {
+      return;
+    }
+    ServerProfile? target;
+    for (final ServerProfile p in servers) {
+      if (p.id == id) {
+        target = p;
+        break;
+      }
+    }
+    if (target == null) {
+      return;
+    }
+    _disposeSession();
+    await tokenStore.clear();
+    activeServerId = target.id;
+    settings = target.settings;
+    await serverStore.saveActiveId(activeServerId);
+    notice = null;
+    _setStage(settings.isConfigured ? AppStage.login : AppStage.serverSetup);
+  }
+
+  /// 改一台档案的标签（不改其连接参数）。
+  Future<void> renameServer(String id, String label) async {
+    servers = <ServerProfile>[
+      for (final ServerProfile p in servers)
+        if (p.id == id) p.copyWith(label: label) else p,
+    ];
+    await serverStore.saveAll(servers);
+    notifyListeners();
+  }
+
+  /// 删除一台档案；删的若是当前服务器，则回服务器配置页。
+  Future<void> removeServer(String id) async {
+    final bool wasActive = id == activeServerId;
+    servers = <ServerProfile>[
+      for (final ServerProfile p in servers)
+        if (p.id != id) p,
+    ];
+    await serverStore.saveAll(servers);
+    if (wasActive) {
+      _disposeSession();
+      await tokenStore.clear();
+      activeServerId = servers.isEmpty ? null : servers.first.id;
+      await serverStore.saveActiveId(activeServerId);
+      settings = activeServer?.settings ?? const AppSettings();
+      _setStage(
+        settings.isConfigured ? AppStage.login : AppStage.serverSetup,
+      );
+    } else {
+      notifyListeners();
+    }
   }
 
   /// 回到服务器配置页（保留已填地址，方便修改）。

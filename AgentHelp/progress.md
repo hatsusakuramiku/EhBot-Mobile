@@ -195,3 +195,23 @@
   同时可见，分段会隐藏其一；详情页操作区保留在滚动内容内（测试用 `scrollUntilVisible` 定位按钮，
   若放进 sticky 底栏会失去可滚动性）。两点都写进本条目备查。
 - 状态：**已落地并提交**；下一步 M7-C（多服务器数据层 + 启动迁移）。
+
+## M7-C · 2026-10-11 · 多服务器数据层 + 启动迁移（基线 132 → 138）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`138 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：不变。
+- 改动：
+  - `lib/state/server_store.dart`（新增）：`ServerProfile { id, label, settings }`
+    + `ServerStore`（`ehbot.servers` JSON 数组 + `ehbot.active_server_id`）
+    + `newServerId()`。**不做账号体系**——多份档案只是「多台服务器」。
+  - `lib/state/app_state.dart`：新增 `serverStore`（构造参数可选，旧调用零改动）、
+    `servers` / `activeServerId` / `activeServer` getter；`bootstrap()` 读多档案，
+    **旧 `ehbot.settings` 自动迁移**成一条档案（老用户无感升级）；
+    `saveSettings()` 改为 upsert 当前档案；新增 `switchServer()`（登出 + 切档 + 落登录页）、
+    `renameServer()`、`removeServer()`（删当前档时回落到下一条）。
+  - `test/state/server_store_test.dart`（新增 6 条）：迁移 / 多档选中 / active 失效回落 /
+    切换登出 / 删除回落 / 重命名。
+- 验证：`flutter analyze` 零告警；`flutter test` → 138 / 0 failed（M7-B 的 132 + 新增 6）。
+- 文档：`AgentHelp/PHASES.md`（M7-C 状态）。
+- 状态：**已落地并提交**；下一步 M7-D（动效 + 响应式打磨）。
