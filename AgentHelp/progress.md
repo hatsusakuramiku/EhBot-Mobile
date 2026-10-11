@@ -332,3 +332,22 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 155 / 0 failed（152 + 3）。
 - 文档：`AgentHelp/PHASES.md`（M8-E 状态）。
 - 状态：**已落地并提交**；下一步 M8-F（多选 + 滑动手势）。
+
+## M8-F · 2026-10-11 · 多选 + 滑动手势（M8 收尾，基线 155 → 158）
+
+- 版本：Flutter 3.47.6 stable；App 版本升 **v0.2.0**。
+- 测试基线：`158 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：候选批量审核端点已存在（`POST /api/v1/candidates/batch`）。
+- 改动：
+  - `lib/ui/widgets/eh_card.dart`：新增 `onLongPress`；有任一回调即走 `InkWell`。
+  - `lib/ui/candidates_page.dart`：
+    - **长按进入多选**（`_selected`），进入后行首显示勾选图标、点行即切换选中；
+    - 底部批量条（`candidate-batch-approve` / `candidate-batch-reject` /
+      `candidate-batch-cancel`），走现有批量端点并刷新；
+    - **滑动手势**（`Dismissible`）：右滑通过、左滑驳回，`confirmDismiss` 里执行动作并
+      返回 `false`，条目由后端刷新决定去留（不先斩后奏）。
+  - `test/ui/candidates_batch_test.dart`（3 条）：长按多选 + 批量通过 / 取消退出 / 右滑通过。
+- 验证：`flutter analyze` 零告警；`flutter test` → 158 / 0 failed（155 + 3）。
+- 文档：`AgentHelp/PHASES.md`、`README.md`（五页 + 多服务器 + 设置分区说明、基线 158）、
+  `CHANGELOG.md`（v0.2.0 段落）。
+- 状态：**M8 全部六个子阶段完成**。本轮 M7 + M8 合计基线 105 → 158。

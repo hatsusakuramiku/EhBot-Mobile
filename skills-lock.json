@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "flutter-ui-ux": {
+      "source": "modelscope.cn",
+      "sourceUrl": "https://www.modelscope.cn/skills/@ajianaz/flutter-ui-ux",
+      "sourceType": "well-known",
+      "computedHash": "a0fc21d9328f80ab16c3e3463a12f4fd86462bc6370fe0ea016dc06ae1616654",
+      "wellKnownDigest": "sha256:13294fe4946a10e81ac31765ecd6b8dfe6e33ce2c657e780e4904f3cbc2e264f"
+    }
+  }
+}

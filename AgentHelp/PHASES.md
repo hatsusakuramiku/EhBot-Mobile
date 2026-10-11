@@ -32,15 +32,17 @@
 | M8-C | Manual Add + Dedup | **完成**（基线 150） | `progress.md` M8-C |
 | M8-D | Logs live（SSE） | **完成**（基线 152） | `progress.md` M8-D |
 | M8-E | Settings 九区（导航 + 两态渲染骨架） | **完成**（基线 155；各专用表单待后端） | `progress.md` M8-E |
-| M8-F | 多选 + 滑动手势 | 待实施 | 同上 §7 |
+| M8-F | 多选 + 滑动手势 | **完成**（基线 158） | `progress.md` M8-F |
 
 ## 三、当前状态
 
 - M0–M6 已完成：文档框架、Flutter 工程与 CI、双登录与
   会话保持、带鉴权的封面缓存、四块数据页与审核、SSE + 轮询
   间隔、仓库重命名、所有行可点 + 设置只读 + 详情动态按钮；基线 `M6 = 105 tests / 0 failed`。
-- **M7 / M8 已由运营者放行**，正在按 sub-phase 逐步落地：`M7-A` 已完成
-  （`theme.dart` + 13 个组件 + 组件测试，基线 `132 tests / 0 failed`）。
+- **M7 / M8 已由运营者放行并全部落地**：M7-A..D + M8-A..F 八个子阶段完成，
+  基线 `105 → 158 tests / 0 failed`；App 版本升 **v0.2.0**。
+- 未完成的收尾项：各设置分区的**专用编辑表单**（待 EhBot 仓库 `B-M8` 端点落地后逐区补齐）；
+  黄金截图基线未建立（改用可移植断言，理由见 `progress.md` M7-D）。
 - 依赖变更：`dynamic_color` 已移除——它的 2.1.0 依赖独立 `material_ui` 包，
   其 `ColorScheme`/`Widget` 与 `package:flutter/material.dart` 不是同一套类型，
   引发跨包类型冲突；主题改为 seed 兜底色（`0xFFE91E63`）。

@@ -18,6 +18,7 @@ class EhCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EhCardTone tone;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final String? semanticsLabel;
   final bool dense;
 
@@ -27,6 +28,7 @@ class EhCard extends StatelessWidget {
     this.padding,
     this.tone = EhCardTone.neutral,
     this.onTap,
+    this.onLongPress,
     this.semanticsLabel,
     this.dense = false,
   });
@@ -56,14 +58,16 @@ class EhCard extends StatelessWidget {
         child: child,
       ),
     );
+    final bool interactive = onTap != null || onLongPress != null;
     return Semantics(
       label: semanticsLabel,
-      button: onTap != null,
-      child: onTap == null
+      button: interactive,
+      child: !interactive
           ? card
           : InkWell(
               borderRadius: BorderRadius.circular(EhRadius.card),
               onTap: onTap,
+              onLongPress: onLongPress,
               child: card,
             ),
     );

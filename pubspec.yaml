@@ -1,7 +1,7 @@
 name: ehbot_mobile
 description: "EhBot 的 Flutter 移动客户端。"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+1
 
 environment:
   sdk: ^3.13.5

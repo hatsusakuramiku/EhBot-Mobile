@@ -7,6 +7,7 @@ import '../api/models.dart';
 import '../media/thumbnail_loader.dart';
 import '../state/live_monitor.dart';
 import 'candidate_detail_page.dart';
+import 'error_text.dart';
 import 'theme.dart';
 import 'widgets/cover_thumb.dart';
 import 'widgets/eh_card.dart';
@@ -65,6 +66,10 @@ class _CandidatesPageState extends State<CandidatesPage> {
   bool _loading = false;
   Object? _error;
   StreamSubscription<int>? _ticks;
+
+  /// 多选：非空即进入选择模式（M8-F）。
+  final Set<String> _selected = <String>{};
+  bool _batchBusy = false;
 
   @override
   void initState() {
@@ -151,11 +156,60 @@ class _CandidatesPageState extends State<CandidatesPage> {
     if (tab == _tab) {
       return;
     }
+    _selected.clear();
     setState(() => _tab = tab);
     unawaited(_reload());
   }
 
+  void _toggleSelection(Candidate candidate) {
+    setState(() {
+      if (!_selected.remove(candidate.id)) {
+        _selected.add(candidate.id);
+      }
+    });
+  }
+
+  void _clearSelection() => setState(_selected.clear);
+
+  Future<void> _batchReview(String action) async {
+    if (_selected.isEmpty || _batchBusy) {
+      return;
+    }
+    setState(() => _batchBusy = true);
+    try {
+      final ReviewBatchResult result = await widget.api.review(
+        action: action,
+        candidateIds: _selected.toList(),
+      );
+      if (!mounted) {
+        return;
+      }
+      final String verb = action == 'approve' ? '通过' : '驳回';
+      final String message = result.skipped.isEmpty
+          ? '已$verb ${result.applied} 个候选。'
+          : '已$verb ${result.applied} 个；${result.skipped.length} 个被跳过。';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+      _clearSelection();
+      await _reload();
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(describeError(error))));
+    } finally {
+      if (mounted) {
+        setState(() => _batchBusy = false);
+      }
+    }
+  }
+
   Future<void> _openDetail(Candidate candidate) async {
+    if (_selected.isNotEmpty) {
+      _toggleSelection(candidate);
+      return;
+    }
     final bool changed =
         await Navigator.of(context).push<bool>(
           MaterialPageRoute<bool>(
@@ -173,7 +227,14 @@ class _CandidatesPageState extends State<CandidatesPage> {
   }
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
+  Widget build(BuildContext context) => Column(
+    children: <Widget>[
+      Expanded(child: _scrollBody()),
+      if (_selected.isNotEmpty) _selectionBar(context),
+    ],
+  );
+
+  Widget _scrollBody() => RefreshIndicator(
     onRefresh: _reload,
     child: CustomScrollView(
       slivers: <Widget>[
@@ -186,6 +247,46 @@ class _CandidatesPageState extends State<CandidatesPage> {
         ..._contentSlivers(),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
+    ),
+  );
+
+  Widget _selectionBar(BuildContext context) => Material(
+    elevation: 3,
+    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: EhSpacing.l,
+          vertical: EhSpacing.s,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(child: Text('已选 ${_selected.length} 个')),
+            TextButton(
+              key: const ValueKey<String>('candidate-batch-cancel'),
+              onPressed: _batchBusy ? null : _clearSelection,
+              child: const Text('取消'),
+            ),
+            const SizedBox(width: EhSpacing.s),
+            FilledButton(
+              key: const ValueKey<String>('candidate-batch-approve'),
+              onPressed: _batchBusy
+                  ? null
+                  : () => unawaited(_batchReview('approve')),
+              child: const Text('通过'),
+            ),
+            const SizedBox(width: EhSpacing.s),
+            OutlinedButton(
+              key: const ValueKey<String>('candidate-batch-reject'),
+              onPressed: _batchBusy
+                  ? null
+                  : () => unawaited(_batchReview('reject')),
+              child: const Text('驳回'),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 
@@ -312,15 +413,98 @@ class _CandidatesPageState extends State<CandidatesPage> {
   );
 
   Widget _candidateCard(Candidate candidate) {
+    final Widget card = _candidateCardBody(candidate);
+    if (_selected.isNotEmpty) {
+      return card;
+    }
+    // 滑动手势（M8-F）：右滑通过、左滑驳回；动作走回调，条目本身不消失
+    // （状态由后端刷新决定，避免界面先斩后奏）。
+    final ColorScheme cs = Theme.of(context).colorScheme;
+    return Dismissible(
+      key: ValueKey<String>('candidate-swipe-${candidate.id}'),
+      background: _swipeBackground(
+        cs.primaryContainer,
+        cs.onPrimaryContainer,
+        Icons.check,
+        Alignment.centerLeft,
+      ),
+      secondaryBackground: _swipeBackground(
+        cs.errorContainer,
+        cs.onErrorContainer,
+        Icons.close,
+        Alignment.centerRight,
+      ),
+      confirmDismiss: (DismissDirection direction) async {
+        await _swipeReview(
+          candidate,
+          direction == DismissDirection.startToEnd ? 'approve' : 'reject',
+        );
+        return false;
+      },
+      child: card,
+    );
+  }
+
+  Widget _swipeBackground(
+    Color bg,
+    Color fg,
+    IconData icon,
+    Alignment alignment,
+  ) => Container(
+    alignment: alignment,
+    padding: const EdgeInsets.symmetric(horizontal: EhSpacing.xl),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(EhRadius.card),
+    ),
+    child: Icon(icon, color: fg),
+  );
+
+  Future<void> _swipeReview(Candidate candidate, String action) async {
+    try {
+      final ReviewBatchResult result = await widget.api.review(
+        action: action,
+        candidateIds: <String>[candidate.id],
+      );
+      if (!mounted) {
+        return;
+      }
+      final String verb = action == 'approve' ? '通过' : '驳回';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已$verb ${result.applied} 个候选。')));
+      await _reload();
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(describeError(error))));
+    }
+  }
+
+  Widget _candidateCardBody(Candidate candidate) {
     final CoverRef? cover = candidate.cover;
     return EhCard(
       key: ValueKey<String>('candidate-${candidate.id}'),
       dense: true,
       onTap: () => unawaited(_openDetail(candidate)),
+      onLongPress: () => _toggleSelection(candidate),
       semanticsLabel: candidate.displayTitle,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          if (_selected.isNotEmpty) ...<Widget>[
+            Icon(
+              _selected.contains(candidate.id)
+                  ? Icons.check_circle
+                  : Icons.circle_outlined,
+              color: _selected.contains(candidate.id)
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            const SizedBox(width: EhSpacing.s),
+          ],
           CoverThumb(
             loader: widget.thumbnails,
             hash: cover?.hash,
