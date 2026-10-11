@@ -187,6 +187,85 @@ class EhBotApi {
     );
   }
 
+  /// 要求修订（`POST /api/v1/works/{candidate_id}/needs-revision`，EhBot R70）。
+  ///
+  /// [reason] 是落审计的那句话，**后端要求非空**：没有理由的「要求修订」
+  /// 是一句没人能执行的请求，所以空串会得到 400 `REVISION_REASON_REQUIRED`。
+  Future<void> requestRevision(String candidateId, String reason) async {
+    await client.postJson(
+      '/api/v1/works/$candidateId/needs-revision',
+      body: <String, Object?>{'reason': reason},
+    );
+  }
+
+  /// 打包 / 重新打包（`POST /api/v1/works/{candidate_id}/convert`，EhBot R70）。
+  ///
+  /// 一个端点两件事：后端按作品幂等，第二次按下就是把那条打包任务重新置为待跑
+  /// （落回它替换的那个文件，不会造出 `book (2).cbz`）。返回任务 id。
+  /// 还没下载过任何产物时后端回 400 `ARCHIVE_NOT_READY`。
+  Future<String> convertWork(String candidateId) async {
+    final Map<String, dynamic> json = _ok(
+      await client.postJson(
+        '/api/v1/works/$candidateId/convert',
+        body: const <String, Object?>{},
+      ),
+    );
+    return asString(json['job_id']);
+  }
+
+  /// 重获元数据（`POST /api/v1/works/{candidate_id}/fetch-metadata`，EhBot R71）。
+  ///
+  /// 没有关联画廊时后端回 400 `CANDIDATE_HAS_NO_EX_REFERENCE`；
+  /// 没配 ExHentai 连接时回 503。
+  Future<void> fetchMetadata(String candidateId) async {
+    await client.postJson(
+      '/api/v1/works/$candidateId/fetch-metadata',
+      body: const <String, Object?>{},
+    );
+  }
+
+  /// 按来源拉取（`POST /api/v1/works/{candidate_id}/sources/{provider}`，EhBot R72）。
+  ///
+  /// [provider] 用详情页 `actions.sources[].provider.code`
+  /// （`TELEGRAM` / `TELEGRAM_USER` / `EXHENTAI` / `TELEGRAPH` / `EH_TORRENT`）。
+  /// 一律是「再拉一次」；`EXHENTAI` 会消耗 GP，确认是客户端的事。返回任务 id。
+  Future<String> pullSource({
+    required String candidateId,
+    required String provider,
+  }) async {
+    final Map<String, dynamic> json = _ok(
+      await client.postJson(
+        '/api/v1/works/$candidateId/sources/$provider',
+        body: const <String, Object?>{},
+      ),
+    );
+    return asString(json['job_id']);
+  }
+
+  /// 改名 / 移动已下载作品（`POST /api/v1/downloaded/{id}/rename`，EhBot R73）。
+  ///
+  /// **两栏都要发**：只给 [filename] 等于把文件移到库根。页面的抽屉是从
+  /// 作品当前路径预填两栏再发的，这里照做。返回 `moved`——false 表示
+  /// 「文件名未变更」，不是失败。
+  Future<bool> renameDownloaded({
+    required String candidateId,
+    required String filename,
+    required String directory,
+    bool repack = false,
+  }) async {
+    final Map<String, dynamic> json = _ok(
+      await client.postJson(
+        '/api/v1/downloaded/$candidateId/rename',
+        body: <String, Object?>{
+          'filename': filename,
+          'directory': directory,
+          if (repack) 'repack': true,
+        },
+      ),
+    );
+    return asBool(json['moved']);
+  }
+
   /// 已下载作品的批量动作：`repack` / `remove`（+[deleteFiles]）/ `redownload`。
   ///
   /// [repack] 只对 `redownload` 有意义（重新下载时顺带重新打包）。

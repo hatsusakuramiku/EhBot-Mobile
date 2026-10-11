@@ -11,10 +11,11 @@ bool isEndpointMissing(Object error) =>
 const String kEndpointMissingHint =
     '后端还没有这个端点（EhBot 侧尚未实现）。当前调用会返回 404。';
 
-/// 详情页里**已知**后端 `/api/v1` 还没有的动作的说明（禁用按钮的 tooltip）。
+/// 「后端 `/api/v1` 还没有这个动作」的说明。
 ///
-/// 这些动作在网页层存在（cookie + CSRF），移动端够不着：
-/// 重获元数据 / 打包与重新打包 / 需要修订 / 按来源拉取原档。
+/// EhBot R70–R73 把作品动作面补齐（要求修订 / 打包 / 重获元数据 / 按来源拉取 /
+/// 已下载改名），所以详情页与已下载页已经没有这种按钮；这条留给后续新增的、
+/// 后端尚未实现的动作，以及设置六区（只读）的说明。
 const String kActionEndpointMissingHint =
     '后端 /api/v1 还没有这个动作（目前只有网页层有）。需要 EhBot 再补一期端点。';
 

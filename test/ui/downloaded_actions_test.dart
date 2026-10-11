@@ -174,4 +174,70 @@ void main() {
     expect(bodies.single, contains('"action":"redownload"'));
     expect(bodies.single, isNot(contains('delete_files')));
   });
+
+  testWidgets('改名 / 移动：两栏预填，一起发；repack 带上', (WidgetTester tester) async {
+    final List<String> bodies = <String>[];
+    await pump(
+      tester,
+      MockClient((http.Request request) async {
+        if (request.url.path.endsWith('/rename')) {
+          bodies.add(request.body);
+          return jsonResponse(<String, Object?>{'moved': true});
+        }
+        if (request.url.path.endsWith('/auth/whoami')) {
+          return jsonResponse(whoAmIJson(kind: 'api_key'));
+        }
+        return jsonResponse(<String, Object?>{
+          'works': <Map<String, Object?>>[
+            <String, Object?>{
+              ...workJson(),
+              'cbz_path': '/library/作者/已下载本.cbz',
+              'library_relative_path': '作者/已下载本.cbz',
+              'actions': <String, Object?>{'rename': true},
+            },
+          ],
+          'total': 1,
+          'tab': 'all',
+          'counts': <String, Object?>{'all': 1},
+          'live': false,
+        });
+      }),
+    );
+
+    await tapKey(tester, 'downloaded-rename-11');
+
+    // 预填与网页抽屉同一套：文件名去掉 .cbz，目录取相对路径的 dirname。
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey<String>('rename-filename')),
+          )
+          .controller!
+          .text,
+      '已下载本',
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey<String>('rename-directory')),
+          )
+          .controller!
+          .text,
+      '作者',
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('rename-filename')),
+      '新名字',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('rename-repack')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('rename-submit')));
+    await tester.pumpAndSettle();
+
+    expect(bodies.single, contains('"filename":"新名字"'));
+    // 目录必须一起发：只给文件名等于把文件移到库根。
+    expect(bodies.single, contains('"directory":"作者"'));
+    expect(bodies.single, contains('"repack":true'));
+  });
 }

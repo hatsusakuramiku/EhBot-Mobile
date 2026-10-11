@@ -18,6 +18,113 @@ import 'widgets/search_bar.dart';
 import 'widgets/selection_bar.dart';
 import 'widgets/tone_chip.dart';
 
+/// 改名对话框的结果。
+class RenameResult {
+  const RenameResult({
+    required this.filename,
+    required this.directory,
+    required this.repack,
+  });
+
+  final String filename;
+  final String directory;
+  final bool repack;
+}
+
+/// 改名 / 移动一本书的 CBZ。
+///
+/// 两栏都预填（文件名来自 CBZ 路径、目录来自库内相对路径），照网页抽屉的算法：
+/// **只发文件名等于把文件移到库根**，所以预填目录不是顺手，是正确性的一部分。
+class RenameWorkDialog extends StatefulWidget {
+  const RenameWorkDialog({super.key, required this.work});
+
+  final DownloadedWork work;
+
+  @override
+  State<RenameWorkDialog> createState() => _RenameWorkDialogState();
+}
+
+class _RenameWorkDialogState extends State<RenameWorkDialog> {
+  late final TextEditingController _filename = TextEditingController(
+    text: widget.work.renameFilename,
+  );
+  late final TextEditingController _directory = TextEditingController(
+    text: widget.work.renameDirectory,
+  );
+  bool _repack = false;
+
+  @override
+  void dispose() {
+    _filename.dispose();
+    _directory.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('改名 / 移动'),
+    content: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            widget.work.libraryRelativePath.isEmpty
+                ? widget.work.cbzPath
+                : widget.work.libraryRelativePath,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: EhSpacing.s),
+          TextField(
+            key: const ValueKey<String>('rename-filename'),
+            controller: _filename,
+            decoration: const InputDecoration(
+              labelText: '文件名',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: EhSpacing.s),
+          TextField(
+            key: const ValueKey<String>('rename-directory'),
+            controller: _directory,
+            decoration: const InputDecoration(
+              labelText: '目录（库内相对路径）',
+              helperText: '留空即移到库根',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          CheckboxListTile(
+            key: const ValueKey<String>('rename-repack'),
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: _repack,
+            onChanged: (bool? v) => setState(() => _repack = v ?? false),
+            title: const Text('保存后重新打包'),
+            subtitle: const Text('按新名字重新生成 CBZ，而不是等下一次打包'),
+          ),
+        ],
+      ),
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('取消'),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('rename-submit'),
+        onPressed: () => Navigator.of(context).pop(
+          RenameResult(
+            filename: _filename.text.trim(),
+            directory: _directory.text.trim(),
+            repack: _repack,
+          ),
+        ),
+        child: const Text('保存'),
+      ),
+    ],
+  );
+}
+
 /// 已下载列表：大标题 + 搜索 + 加载更多。
 class DownloadedListPage extends StatefulWidget {
   const DownloadedListPage({
@@ -207,6 +314,44 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('$done：${work.displayTitle}')));
+      await _reload();
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(describeError(error))));
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  /// 改名 / 移动（EhBot R73）：两栏一起发，与网页抽屉同一套预填。
+  Future<void> _rename(DownloadedWork work) async {
+    final RenameResult? result = await showDialog<RenameResult>(
+      context: context,
+      builder: (BuildContext c) => RenameWorkDialog(work: work),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final bool moved = await widget.api.renameDownloaded(
+        candidateId: work.candidateId,
+        filename: result.filename,
+        directory: result.directory,
+        repack: result.repack,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(moved ? '已移动到新的路径。' : '文件名未变更。')),
+      );
       await _reload();
     } on Object catch (error) {
       if (!mounted) {
@@ -476,7 +621,7 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
         // 行内动作：可见性来自后端 `actions`（在途的作品会把 remove / redownload
         // 压下去，因为那两个会和 worker 抢同一行）。
         if (_selected.isEmpty &&
-            (work.canRepack || work.canRedownload || work.canRemove))
+            (work.canRepack || work.canRedownload || work.canRename))
           Padding(
             padding: const EdgeInsets.only(top: EhSpacing.s),
             child: Wrap(
@@ -508,6 +653,12 @@ class _DownloadedListPageState extends State<DownloadedListPage> {
                             _runOne(kDownloadedRedownload, work, '已重新下载'),
                           ),
                     child: const Text('重新下载'),
+                  ),
+                if (work.canRename)
+                  TextButton(
+                    key: ValueKey<String>('downloaded-rename-${work.candidateId}'),
+                    onPressed: _busy ? null : () => unawaited(_rename(work)),
+                    child: const Text('改名 / 移动'),
                   ),
               ],
             ),

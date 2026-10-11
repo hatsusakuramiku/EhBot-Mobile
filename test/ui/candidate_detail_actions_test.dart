@@ -169,7 +169,9 @@ void main() {
     );
   });
 
-  testWidgets('后端还没有的动作渲染为禁用并说明原因', (WidgetTester tester) async {
+  testWidgets('后端已有端点的动作都能点；不可用的来源仍禁用并给原因', (
+    WidgetTester tester,
+  ) async {
     await pump(
       tester,
       backendWithDetail(
@@ -180,31 +182,144 @@ void main() {
             'convert': true,
             'sources': <Map<String, Object?>>[
               sourceJson('EH_TORRENT', 'EH 种子'),
-              sourceJson('EXHENTAI', 'Archive Download', available: false, hint: '没有关联画廊'),
+              sourceJson(
+                'EXHENTAI',
+                'Archive Download',
+                available: false,
+                hint: '没有关联画廊',
+              ),
             ],
           },
         ),
       ),
     );
 
-    final ButtonStyleButton needsRevision = tester.widget<ButtonStyleButton>(
-      find.byKey(const ValueKey<String>('detail-action-needs_revision')),
-    );
-    expect(needsRevision.onPressed, isNull);
-
-    final ButtonStyleButton convert = tester.widget<ButtonStyleButton>(
-      find.byKey(const ValueKey<String>('detail-action-convert')),
-    );
-    expect(convert.onPressed, isNull);
-
-    // 四个来源：可用的与不可用的都能看见，但都不能调（/api/v1 还没有这个端点）。
-    for (final String code in <String>['EH_TORRENT', 'EXHENTAI']) {
-      final ButtonStyleButton source = tester.widget<ButtonStyleButton>(
-        find.byKey(ValueKey<String>('detail-action-source-$code')),
+    // R70–R72 之后这些都有 /api/v1 出口了。
+    for (final String key in <String>[
+      'detail-action-needs_revision',
+      'detail-action-fetch_metadata',
+      'detail-action-convert',
+      'detail-action-source-EH_TORRENT',
+    ]) {
+      final ButtonStyleButton button = tester.widget<ButtonStyleButton>(
+        find.byKey(ValueKey<String>(key)),
       );
-      expect(source.onPressed, isNull, reason: '$code 应当禁用');
+      expect(button.onPressed, isNotNull, reason: '$key 应当可点');
     }
-    expect(find.text('EH 种子'), findsOneWidget);
+
+    // 来源不可用时按钮留在原地、禁用，并把原因写在 tooltip 里：
+    // 运营者找得到「Archive Download」才分得清是没配画廊还是这页坏了。
+    final ButtonStyleButton unavailable = tester.widget<ButtonStyleButton>(
+      find.byKey(const ValueKey<String>('detail-action-source-EXHENTAI')),
+    );
+    expect(unavailable.onPressed, isNull);
+    expect(
+      tester.widget<Tooltip>(
+        find.ancestor(
+          of: find.byKey(
+            const ValueKey<String>('detail-action-source-EXHENTAI'),
+          ),
+          matching: find.byType(Tooltip),
+        ),
+      ).message,
+      '没有关联画廊',
+    );
+  });
+
+  testWidgets('要求修订：先填理由，再打 works/{id}/needs-revision', (
+    WidgetTester tester,
+  ) async {
+    final List<String> bodies = <String>[];
+    await pump(
+      tester,
+      backendWithDetail(
+        detailJson(actions: <String, Object?>{'needs_revision': true}),
+        onRequest: (http.Request request) {
+          if (request.url.path.endsWith('/needs-revision')) {
+            bodies.add(request.body);
+          }
+        },
+      ),
+    );
+
+    await tapKey(tester, 'detail-action-needs_revision');
+    // 空理由时提交按钮是禁用的——后端也会拒，但没必要先发一次。
+    expect(
+      tester
+          .widget<ButtonStyleButton>(
+            find.byKey(const ValueKey<String>('revision-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('revision-reason')),
+      '封面不对',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('revision-submit')));
+    await tester.pumpAndSettle();
+
+    expect(bodies.single, contains('"reason":"封面不对"'));
+  });
+
+  testWidgets('打包与重获元数据各打自己的端点', (WidgetTester tester) async {
+    final List<String> paths = <String>[];
+    await pump(
+      tester,
+      backendWithDetail(
+        detailJson(
+          actions: <String, Object?>{'convert': true, 'fetch_metadata': true},
+        ),
+        onRequest: (http.Request request) {
+          // 详情本身也是 `/works/11`，只挑两个动作端点。
+          if (request.url.path.startsWith('/api/v1/works/') &&
+              (request.url.path.endsWith('/convert') ||
+                  request.url.path.endsWith('/fetch-metadata'))) {
+            paths.add(request.url.path);
+          }
+        },
+      ),
+    );
+
+    await tapKey(tester, 'detail-action-convert');
+    await tapKey(tester, 'detail-action-fetch_metadata');
+
+    expect(paths, <String>[
+      '/api/v1/works/11/convert',
+      '/api/v1/works/11/fetch-metadata',
+    ]);
+  });
+
+  testWidgets('按来源拉取；EXHENTAI 先确认消耗 GP', (WidgetTester tester) async {
+    final List<String> paths = <String>[];
+    await pump(
+      tester,
+      backendWithDetail(
+        detailJson(
+          actions: <String, Object?>{
+            'sources': <Map<String, Object?>>[
+              sourceJson('EH_TORRENT', 'EH 种子'),
+              sourceJson('EXHENTAI', 'Archive Download'),
+            ],
+          },
+        ),
+        onRequest: (http.Request request) {
+          if (request.url.path.contains('/sources/')) {
+            paths.add(request.url.path);
+          }
+        },
+      ),
+    );
+
+    await tapKey(tester, 'detail-action-source-EH_TORRENT');
+    expect(paths, <String>['/api/v1/works/11/sources/EH_TORRENT']);
+
+    await tapKey(tester, 'detail-action-source-EXHENTAI');
+    expect(paths, hasLength(1), reason: '确认之前不该发请求');
+    await tester.tap(find.text('确认消耗 GP'));
+    await tester.pumpAndSettle();
+    expect(paths.last, '/api/v1/works/11/sources/EXHENTAI');
   });
 
   testWidgets('重新排队打 works/{id}/requeue', (WidgetTester tester) async {

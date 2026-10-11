@@ -2,7 +2,7 @@
 
 > **先读这份**。每条一行摘要 + `progress.md` 的行号指针；要细节再下钻。
 > 基线链（移动端）：**M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 →
-> M6 = 105 → M7 = 140 → M8 = 158 → M9 = 196 tests / 0 failed**
+> M6 = 105 → M7 = 140 → M8 = 158 → M9 = 204 tests / 0 failed**
 > （`flutter analyze` 零告警）。后端基线在 EhBot 仓库，与本仓库分开记。
 
 ## 一、后端依赖（在 EhBot 仓库实施，本仓库只依赖）
@@ -13,6 +13,7 @@
 | B2 | 网页「设置 › 密码库」单 Key 生成 / 刷新 / 撤销 | **已完成**（EhBot **R54**） | 同上 §4.5 |
 | B-M8 | settings / dedup / logs / manual_add 端点 | **已完成**（EhBot **R60–R63**） | 本仓 `M8_FEATURE_REPLICATION_PROPOSAL.md` §4.2 |
 | B-M9 | 动作面补口：删除 / 重新排队 / 手动添加 / 设置写入 | **已完成**（EhBot **R64–R69**） | EhBot `AgentHelp/MOBILE_API_COMPLETION_PROPOSAL.md`；本仓 `CONTRACT.md` §5、§5.2、§7 |
+| B-M9b | 动作面补口下半场：要求修订 / 打包 / 重获元数据 / 按来源拉取 / 已下载改名 | **已完成**（EhBot **R70–R73**） | EhBot `AgentHelp/MOBILE_API_COMPLETION_ROUND2_PROPOSAL.md` |
 
 ## 二、本仓库阶段
 
@@ -41,6 +42,7 @@
 | M9-D | 已下载 / 活动 / 去重：重下载 / 重打包 / 移除 / 切源 | **完成**（基线 184） | `progress.md` M9-D |
 | M9-E | 设置：外观 + 服务器 + 三区写入 + 六区只读 | **完成**（基线 196） | `progress.md` M9-E |
 | M9-F | 候选多选删除 + 手动添加 409 更正 | **完成**（基线 187） | `progress.md` M9-F |
+| M9-G | 接上 EhBot R70–R73 的作品动作面（要求修订 / 打包 / 拉取元数据 / 按来源拉取 / 改名） | **完成**（基线 204） | `progress.md` M9-G |
 
 ## 三、当前状态
 

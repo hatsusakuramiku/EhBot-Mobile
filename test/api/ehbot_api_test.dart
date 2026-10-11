@@ -483,4 +483,79 @@ void main() {
     expect(calls.single, startsWith('PUT /api/v1/settings/system'));
     expect(calls.single, contains('"timezone":"Asia/Tokyo"'));
   });
+  // ------------------------------------------------------- M9-G 作品动作面（R70–R73）
+
+  test('要求修订带 reason，打包 / 重获元数据各打自己的端点', () async {
+    final List<String> calls = <String>[];
+    final EhBotApi api = apiWith(
+      MockClient((http.Request request) async {
+        calls.add('${request.method} ${request.url.path} ${request.body}');
+        return jsonResponse(<String, Object?>{'job_id': 5});
+      }),
+    );
+
+    await api.requestRevision('11', '封面不对');
+    await api.convertWork('11');
+    await api.fetchMetadata('11');
+
+    expect(calls, <String>[
+      'POST /api/v1/works/11/needs-revision {"reason":"封面不对"}',
+      'POST /api/v1/works/11/convert {}',
+      'POST /api/v1/works/11/fetch-metadata {}',
+    ]);
+  });
+
+  test('按来源拉取打 sources/{provider} 并回传 job id', () async {
+    late http.Request captured;
+    final EhBotApi api = apiWith(
+      MockClient((http.Request request) async {
+        captured = request;
+        return jsonResponse(<String, Object?>{'job_id': 42});
+      }),
+    );
+
+    final String jobId = await api.pullSource(
+      candidateId: '11',
+      provider: 'EH_TORRENT',
+    );
+
+    expect(captured.url.path, '/api/v1/works/11/sources/EH_TORRENT');
+    expect(jobId, '42');
+  });
+
+  test('改名两栏一起发，回 moved', () async {
+    final List<String> bodies = <String>[];
+    final EhBotApi api = apiWith(
+      MockClient((http.Request request) async {
+        bodies.add('${request.url.path} ${request.body}');
+        return jsonResponse(<String, Object?>{'moved': true});
+      }),
+    );
+
+    final bool moved = await api.renameDownloaded(
+      candidateId: '11',
+      filename: '新名字',
+      directory: '作者',
+      repack: true,
+    );
+
+    expect(bodies.single, contains('/api/v1/downloaded/11/rename'));
+    expect(bodies.single, contains('"filename":"新名字"'));
+    expect(bodies.single, contains('"directory":"作者"'));
+    expect(bodies.single, contains('"repack":true'));
+    expect(moved, isTrue);
+  });
+
+  test('已下载作品的改名预填与网页抽屉同一套算法', () {
+    final DownloadedWork work = DownloadedWork.fromJson(<String, Object?>{
+      'candidate_id': '11',
+      'cbz_path': '/library/作者/书名.cbz',
+      'library_relative_path': '作者/书名.cbz',
+      'actions': <String, Object?>{'rename': true},
+    });
+
+    expect(work.canRename, isTrue);
+    expect(work.renameFilename, '书名');
+    expect(work.renameDirectory, '作者');
+  });
 }

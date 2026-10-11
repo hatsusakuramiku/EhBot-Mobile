@@ -455,6 +455,7 @@ class DownloadedWork {
     this.packCode = '',
     this.packLabel = '',
     this.cbzPath = '',
+    this.libraryRelativePath = '',
     this.archivePath = '',
     this.archiveSize = 0,
     this.actions = const <String, bool>{},
@@ -473,6 +474,7 @@ class DownloadedWork {
     packCode: asString(asMap(json['pack'])?['code']),
     packLabel: asString(asMap(json['pack'])?['label']),
     cbzPath: asString(json['cbz_path']),
+    libraryRelativePath: asString(json['library_relative_path']),
     archivePath: asString(json['archive_path']),
     archiveSize: asInt(json['archive_size']),
     actions: _boolMap(json['actions']),
@@ -490,6 +492,9 @@ class DownloadedWork {
   final String packCode;
   final String packLabel;
   final String cbzPath;
+
+  /// 相对库根的路径（改名 / 移动表单的目录栏从这里取）。
+  final String libraryRelativePath;
   final String archivePath;
   final int archiveSize;
 
@@ -500,9 +505,28 @@ class DownloadedWork {
   bool get canRepack => actions['repack'] ?? false;
   bool get canRemove => actions['remove'] ?? false;
   bool get canRedownload => actions['redownload'] ?? false;
+  bool get canRename => actions['rename'] ?? false;
 
   /// 已打包的再打包叫「重新打包」，没打包过的是第一次「打包」。
   bool get isPacked => packCode == 'packed';
+
+  /// 改名表单的两个预填值，与网页抽屉同一套算法：
+  /// 文件名取 CBZ 路径的最后一段（去掉 `.cbz`），目录取相对路径的 dirname。
+  String get renameFilename {
+    final String base = cbzPath.split(RegExp(r'[\\/]')).last;
+    return base.toLowerCase().endsWith('.cbz')
+        ? base.substring(0, base.length - 4)
+        : base;
+  }
+
+  String get renameDirectory {
+    final List<String> parts = libraryRelativePath.split('/');
+    if (parts.length <= 1) {
+      return '';
+    }
+    parts.removeLast();
+    return parts.join('/');
+  }
 
   String get displayTitle => title.isEmpty ? '候选 #$candidateId' : title;
 }
@@ -812,6 +836,9 @@ class WorkDetail {
   int get jobCount => jobs.length;
 
   bool get hasGallery => exGid.isNotEmpty;
+
+  /// 已经有归档产物了（`archive.path` 非空 = 后端说这本书已经打包过）。
+  bool get isPackaged => cbzPath.isNotEmpty;
 
   /// True only when the backend explicitly says the named action is allowed.
   bool can(String name) => actions.can(name);

@@ -518,3 +518,37 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 196 / 0 failed（187 + 9）。
 - 文档：`AgentHelp/PHASES.md`、`README.md`（设置整节重写）、`CHANGELOG.md`。
 - 状态：**已落地**。M9 六个子阶段全部完成（基线 158 → 196）。
+
+## M9-G · 2026-10-11 · 接上 R70–R73 的作品动作面（基线 196 → 204）
+
+- 版本：Flutter 3.47.6 stable；App v0.3.0。
+- 测试基线：`204 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：**EhBot R70–R73 已落地**（同一会话里补的五个端点，见 EhBot 仓库
+  `AgentHelp/MOBILE_API_COMPLETION_ROUND2_PROPOSAL.md`）。
+- 改动：
+  - `AgentHelp/CONTRACT.md`：§5 端点表补五个新端点；§5.2 补一张
+    「`actions` 每个键对应哪个端点」的对照表（这是客户端按钮可见性的唯一依据）；
+    §7 的五行动作从「仍需后端」挪到「已就绪」，只留「改归档路径」与设置六区写入。
+  - `lib/api/ehbot_api.dart`：新增 `requestRevision` / `convertWork` / `fetchMetadata` /
+    `pullSource` / `renameDownloaded`。
+  - `lib/api/models.dart`：`DownloadedWork` 补 `library_relative_path` 与
+    `renameFilename` / `renameDirectory`（**与网页抽屉同一套预填算法**：
+    文件名取 CBZ 路径最后一段去掉 `.cbz`，目录取相对路径的 dirname）；
+    `WorkDetail.isPackaged`。
+  - `lib/ui/candidate_detail_page.dart`：底栏四个动作从禁用变为可点——
+    要求修订（先弹 `RevisionReasonDialog`，理由为空时提交按钮禁用，因为后端也会拒）、
+    打包 / 重新打包（已有产物时先确认「落在它当前那个文件上」）、
+    拉取元数据、四个来源按钮（不可用的仍禁用并把后端 `hint` 放进 tooltip；
+    `EXHENTAI` 先确认消耗 GP）。删掉已无用的 `_pending()` 帮助函数。
+  - `lib/ui/downloaded_page.dart`：行内新增「改名 / 移动」
+    （`RenameWorkDialog`：文件名 + 目录 + 「保存后重新打包」）。
+  - 测试：`test/api/ehbot_api_test.dart` +4（三个动作端点的路径与 body、
+    按来源拉取、改名两栏、预填算法）；`candidate_detail_actions_test.dart` 改写
+    那条「禁用」断言为「都能点」并新增 3 条（要求修订、打包 / 重获元数据、按来源拉取）；
+    `downloaded_actions_test.dart` +1（改名两栏预填与实际发出的 body）。
+- 关键约束（写给以后的改动人）：**改名必须两栏一起发**——只给 `filename`
+  在后端是「移到库根」；网页抽屉靠预填避免，移动端照做。
+- 验证：`flutter analyze` 零告警；`flutter test` → 204 / 0 failed（196 + 8）。
+- 文档：`README.md`（详情页动作段 + 基线）、`CHANGELOG.md`（v0.3.0）、
+  `AgentHelp/PHASES.md`、`AgentHelp/CONTRACT.md`。
+- 状态：**已落地**。

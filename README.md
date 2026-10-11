@@ -25,7 +25,7 @@ EhBot 的 Flutter 移动客户端。连接自建的 EhBot 服务，用**密码**
 质量门禁（本地与 CI 同一套，Flutter 锁定 3.47.6）：
 
     flutter analyze  # 要求零告警
-    flutter test     # 当前基线 196 tests / 0 failed
+    flutter test     # 当前基线 204 tests / 0 failed
 
 发布（Android）：一次出 4 份 APK，目标平台在文件名里。需要在 `android/app/build.gradle.kts` 里开 `splits.abi` + `universalApk = true`（M6 follow-up）：
 
@@ -121,8 +121,12 @@ EhBot 没有多用户概念——顶栏的服务器入口管理的是**多台服
 - **任务**：每个任务一张卡，带它自己的动作——重试 / 继续 / 暂停 / 取消 / 停止做种
   （可见性来自 `job_summary.actions`，路径一律用 **job id**）；停滞的种子再多两个
   切源入口（改用预览图源 / 用 Archive Download，后者会消耗 GP，先确认）。
-- **后端 `/api/v1` 还没有的动作**（重获元数据 / 打包与重新打包 / 要求修订 /
-  按来源拉取原档）渲染为**禁用**并说明原因，不会装成能点的按钮去撞 404。
+- **作品动作全部接通**（EhBot R70–R73）：要求修订（理由必填）、打包 / 重新打包、
+  拉取元数据、按来源重新拉取（五个来源；`Archive Download` 会消耗 GP，先确认）。
+  已下载页的行内「改名 / 移动」走 `POST /api/v1/downloaded/{id}/rename`——
+  两栏一起发，只给文件名等于把文件移到库根。
+- **后端 `/api/v1` 还没有的动作**（改归档路径、设置六区写入）渲染为**禁用**或只读
+  并说明原因，不会装成能点的按钮去撞 404。
 
 正文另有：告警与 `warning_hint`、过滤说明（含来源：自动规则 / 人工 / 来源元数据规则）、
 来源消息与附件、画廊 ID / 预览页 / 种子 / 磁力链、归档目录与文件名、

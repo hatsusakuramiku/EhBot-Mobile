@@ -85,6 +85,11 @@
 | POST | `/api/v1/candidates/manual` | 手动添加（R66）：`{url}`；重复 → **409** `CANDIDATE_DUPLICATE` + `details.existing_candidate_id` |
 | PATCH | `/api/v1/works/{candidate_id}/metadata` | 修改元数据：`{fields:{...}, locks:{...}}` |
 | POST | `/api/v1/works/{candidate_id}/requeue` | 重新排队（R65）：`{note?}` |
+| POST | `/api/v1/works/{candidate_id}/needs-revision` | 要求修订（R70）：`{reason}`；理由为空 → 400 `REVISION_REASON_REQUIRED` |
+| POST | `/api/v1/works/{candidate_id}/convert` | 打包 / 重新打包（R70）：空 body，返回 `{candidate_id, job_id}`；无产物 → 400 `ARCHIVE_NOT_READY` |
+| POST | `/api/v1/works/{candidate_id}/fetch-metadata` | 重获画廊元数据（R71）：空 body；无关联画廊 → 400 `CANDIDATE_HAS_NO_EX_REFERENCE`，未配连接 → 503 |
+| POST | `/api/v1/works/{candidate_id}/sources/{provider}` | 按来源拉取（R72）：provider ∈ `TELEGRAM` / `TELEGRAM_USER` / `EXHENTAI` / `TELEGRAPH` / `EH_TORRENT`，返回 `{candidate_id, provider, job_id}`，一律「再拉一次」；`EXHENTAI` 花 GP |
+| POST | `/api/v1/downloaded/{candidate_id}/rename` | 改名 / 移动（R73）：`{filename?, directory?, repack?}`，返回 `{candidate_id, moved, relative_path, repacked}`；**两栏一起发**，只给 filename 等于移到库根 |
 | GET | `/api/v1/queue` | 下载 / 打包进行中快照（含 `live` 标志） |
 | GET | `/api/v1/history?limit=` | 已完成任务 |
 | POST | `/api/v1/jobs/{job_id}/{action}` | 任务操作：重试 / 取消 / 暂停 / 继续等 |
@@ -148,7 +153,16 @@
 
 - **没有** `delete` / `delete_files` / `repack` / `switch_source_*` 这些键。
   客户端此前按这些键取，等于按钮永远不渲染——删除与切源要用别的依据（见下）。
-- `requeue` 为 true 才调 `POST /api/v1/works/{id}/requeue`；`REQUEUEABLE_STATUSES = {REJECTED, NEEDS_REVISION, FAILED}`。
+- **每个键对应的端点（R70–R72 之后全部就绪）**：
+  - `approve` / `reject` → `POST /api/v1/candidates/batch`
+  - `needs_revision` → `POST /api/v1/works/{id}/needs-revision`（**理由必填**）
+  - `requeue` → `POST /api/v1/works/{id}/requeue`；`REQUEUEABLE_STATUSES = {REJECTED, NEEDS_REVISION, FAILED}`
+  - `fetch_metadata` → `POST /api/v1/works/{id}/fetch-metadata`
+  - `convert` / `reconvert` → `POST /api/v1/works/{id}/convert`（一个端点两件事，
+    第二次按下就是把那条打包任务重新置为待跑）
+  - `sources[]` → `POST /api/v1/works/{id}/sources/{provider.code}`
+  - `edit_metadata` → `PATCH /api/v1/works/{id}/metadata`
+  - `edit_archive_path` → **仍需后端**（网页 `/works/{id}/archive-path`）
 - **删除**：`actions` 不给信号，删除入口由客户端按**状态**决定呈现（服务端会拒不可删的状态），
   走 `POST /api/v1/candidates/batch` 的 `delete` / `delete-files`。
 - **切源**：读 `actions.sources[]`，用 `provider.code` 调
@@ -184,6 +198,16 @@
 | system | GET / PUT | `/api/v1/settings/system` | 读快照；写只提交 body 里出现过的字段 |
 | passwords | GET / PUT | `/api/v1/settings/passwords` | `{action:"add"\|"delete"\|"api-key-generate"\|"api-key-revoke"}` |
 
+**已就绪（R70–R73 补上，客户端已接）**
+
+| 模块 | 方法 | 路径 | 用途 |
+|------|------|------|------|
+| 作品动作 | POST | `/api/v1/works/{id}/needs-revision` | 要求修订：`{reason}`，理由必填 |
+| 作品动作 | POST | `/api/v1/works/{id}/convert` | 打包 / 重新打包：空 body，返回 job id |
+| 作品动作 | POST | `/api/v1/works/{id}/fetch-metadata` | 重获画廊元数据 |
+| 作品动作 | POST | `/api/v1/works/{id}/sources/{provider}` | 按来源拉取：五个 provider，一律重新拉 |
+| 已下载 | POST | `/api/v1/downloaded/{id}/rename` | 改名 / 移动；两栏一起发 |
+
 **仍需后端（客户端渲染为禁用态 + 说明，不要撞 404）**
 
 | 模块 | 方法 | 路径 | 用途 |
@@ -199,11 +223,7 @@
 | ai | GET/POST/PATCH/DELETE | `/api/v1/settings/ai/{providers,models}` + `/{id}` | AI 供应商与模型 CRUD |
 | ai | GET/PUT | `/api/v1/settings/ai/chain` | 主力 + 备用模型链 |
 | ai | POST | `/api/v1/settings/ai/verify` | 测试模型连通性 |
-| 作品动作 | POST | `/api/v1/works/{id}/fetch-metadata` | 重获元数据（现仅网页层） |
-| 作品动作 | POST | `/api/v1/works/{id}/sources/{provider}` | 四个来源拉取：`torrent` / `telegraph` / `exhentai-archive` / `telegram-user` |
-| 作品动作 | POST | `/api/v1/works/{id}/convert` | 打包为 CBZ（`convert`）与重新转换（`reconvert`） |
-| 作品动作 | POST | `/api/v1/works/{id}/needs-revision` | 要求修订 |
-| 已下载 | POST | `/api/v1/downloaded/{id}/rename` | 改名 / 归档路径 |
+| 作品动作 | PUT | `/api/v1/works/{id}/archive-path` | 改归档路径（`actions.edit_archive_path`） |
 
 补充：
 

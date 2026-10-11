@@ -184,6 +184,73 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
     );
   }
 
+  /// 要求修订：后端要求给出理由，所以先弹一个输入框。
+  Future<void> _requestRevision() async {
+    final String? reason = await showDialog<String>(
+      context: context,
+      builder: (BuildContext c) => const RevisionReasonDialog(),
+    );
+    if (reason == null || !mounted) {
+      return;
+    }
+    await _guard(
+      () => widget.api.requestRevision(widget.candidate.id, reason),
+      done: '已要求修订。',
+    );
+  }
+
+  /// 打包 / 重新打包：一个端点两件事。
+  Future<void> _convert(WorkDetail detail) async {
+    final bool repack = detail.can('reconvert') || detail.isPackaged;
+    if (repack) {
+      final bool ok = await confirmDialog(
+        context,
+        title: '重新打包',
+        message: '会重新生成这本书的 CBZ，落在它当前的那个文件上。',
+        confirmLabel: '确认重新打包',
+      );
+      if (!ok || !mounted) {
+        return;
+      }
+    }
+    await _guard(
+      () => widget.api.convertWork(widget.candidate.id),
+      done: repack ? '已加入重新打包队列。' : '已加入打包队列。',
+    );
+  }
+
+  Future<void> _fetchMetadata() => _guard(
+    () => widget.api.fetchMetadata(widget.candidate.id),
+    done: '已重新拉取画廊元数据。',
+  );
+
+  /// 按来源拉取。[source] 的 `action` 字段是网页路径，这里只用它的 provider code。
+  Future<void> _pullSource(SourceAction source) async {
+    final String label = source.providerLabel.isEmpty
+        ? source.providerCode
+        : source.providerLabel;
+    if (source.providerCode == 'EXHENTAI') {
+      // 与网页同义的提醒：这条路花 GP，种子与预览页不花。
+      final bool ok = await confirmDialog(
+        context,
+        title: '用 $label 取原档',
+        message: 'Archive Download 会消耗 GP。种子与预览页都不花 GP，'
+            '可先确认这两条是否可用。',
+        confirmLabel: '确认消耗 GP',
+      );
+      if (!ok || !mounted) {
+        return;
+      }
+    }
+    await _guard(
+      () => widget.api.pullSource(
+        candidateId: widget.candidate.id,
+        provider: source.providerCode,
+      ),
+      done: '已按「$label」重新拉取。',
+    );
+  }
+
   Future<void> _editMetadata(MetadataEntry entry) async {
     final MetadataEditResult? result = await showDialog<MetadataEditResult>(
       context: context,
@@ -341,10 +408,10 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
           child: const Text('驳回'),
         ),
       if (detail.can('needs_revision'))
-        _pending(
-          'detail-action-needs_revision',
-          '要求修订',
-          kActionEndpointMissingHint,
+        OutlinedButton(
+          key: const ValueKey<String>('detail-action-needs_revision'),
+          onPressed: _busy ? null : () => unawaited(_requestRevision()),
+          child: const Text('要求修订'),
         ),
       if (detail.can('requeue'))
         OutlinedButton(
@@ -358,26 +425,37 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
           child: const Text('重新排队'),
         ),
       if (detail.can('fetch_metadata'))
-        _pending(
-          'detail-action-fetch_metadata',
-          '拉取元数据',
-          kActionEndpointMissingHint,
+        OutlinedButton(
+          key: const ValueKey<String>('detail-action-fetch_metadata'),
+          onPressed: _busy ? null : () => unawaited(_fetchMetadata()),
+          child: const Text('拉取元数据'),
         ),
       if (detail.can('reconvert') || detail.can('convert'))
-        _pending(
-          'detail-action-convert',
-          detail.can('reconvert') ? '重新打包' : '打包为 CBZ',
-          kActionEndpointMissingHint,
+        OutlinedButton(
+          key: const ValueKey<String>('detail-action-convert'),
+          onPressed: _busy ? null : () => unawaited(_convert(detail)),
+          child: Text(detail.can('reconvert') ? '重新打包' : '打包为 CBZ'),
         ),
       for (final SourceAction source in detail.actions.sources)
-        _pending(
-          'detail-action-source-${source.providerCode}',
-          source.providerLabel.isEmpty
-              ? source.providerCode
-              : source.providerLabel,
-          source.available
-              ? kActionEndpointMissingHint
+        Tooltip(
+          message: source.available
+              ? '按这个来源再拉一次原档'
               : (source.hint.isEmpty ? '这个来源现在不可用' : source.hint),
+          child: OutlinedButton(
+            key: ValueKey<String>(
+              'detail-action-source-${source.providerCode}',
+            ),
+            // 不可用的来源禁用并显示原因：运营者找得到「EX 种子」，
+            // 才分得清「这个来源没配」与「这页坏了」。
+            onPressed: !source.available || _busy
+                ? null
+                : () => unawaited(_pullSource(source)),
+            child: Text(
+              source.providerLabel.isEmpty
+                  ? source.providerCode
+                  : source.providerLabel,
+            ),
+          ),
         ),
       if (rowHasContent(detail))
         const _ActionDivider(),
@@ -423,16 +501,6 @@ class _CandidateDetailPageState extends State<CandidateDetailPage> {
       ),
     );
   }
-
-  /// 「后端 /api/v1 还没有这个动作」的禁用按钮：能看见、知道为什么不能点。
-  Widget _pending(String key, String label, String reason) => Tooltip(
-    message: reason,
-    child: OutlinedButton(
-      key: ValueKey<String>(key),
-      onPressed: null,
-      child: Text(label),
-    ),
-  );
 
   Widget _overview(BuildContext context, WorkDetail detail) {
     final CoverRef? cover = detail.cover ?? widget.candidate.cover;
@@ -714,6 +782,59 @@ class _MetadataEditorState extends State<MetadataEditor> {
           MetadataEditResult(value: _value.text, locked: _locked),
         ),
         child: const Text('保存'),
+      ),
+    ],
+  );
+}
+
+/// 要求修订的理由输入框。
+///
+/// 后端把「没有理由」判为 400（`REVISION_REASON_REQUIRED`），所以这里先拦住：
+/// 一个空理由的请求除了让运营者再填一次，什么也不会发生。
+class RevisionReasonDialog extends StatefulWidget {
+  const RevisionReasonDialog({super.key});
+
+  @override
+  State<RevisionReasonDialog> createState() => _RevisionReasonDialogState();
+}
+
+class _RevisionReasonDialogState extends State<RevisionReasonDialog> {
+  final TextEditingController _reason = TextEditingController();
+  bool _valid = false;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('要求修订'),
+    content: TextField(
+      key: const ValueKey<String>('revision-reason'),
+      controller: _reason,
+      autofocus: true,
+      maxLines: null,
+      onChanged: (String value) =>
+          setState(() => _valid = value.trim().isNotEmpty),
+      decoration: const InputDecoration(
+        labelText: '要改什么',
+        helperText: '这句话会进审计记录',
+        border: OutlineInputBorder(),
+      ),
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('取消'),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('revision-submit'),
+        onPressed: _valid
+            ? () => Navigator.of(context).pop(_reason.text.trim())
+            : null,
+        child: const Text('要求修订'),
       ),
     ],
   );
