@@ -27,7 +27,7 @@
 | M7-B | 七页重写（工作台 / 候选 / 活动 / 已下载 / 详情 / 设置 / 登录） | **完成**（契约零破坏，基线仍 132） | `progress.md` M7-B |
 | M7-C | 多服务器数据层 + 启动迁移 | **完成**（基线 138） | `progress.md` M7-C |
 | M7-D | 响应式断点 + `RepaintBoundary`（黄金截图改可移植断言，见 `progress.md`） | **完成**（基线 140） | `progress.md` M7-D |
-| M8-A | 多服务器 UI（选择 / 编辑 / 切换） | 待实施 | `M8_FEATURE_REPLICATION_PROPOSAL.md` §7 |
+| M8-A | 多服务器 UI（选择 / 编辑 / 切换） | **完成**（基线 144） | `progress.md` M8-A |
 | M8-B | 后端契约（EhBot 仓库 `B-M8`，本仓只改 `CONTRACT.md`） | 待实施 | 同上 §4.2 |
 | M8-C | Manual Add + Dedup | 待实施 | 同上 §7 |
 | M8-D | Logs live（SSE） | 待实施 | 同上 §7 |

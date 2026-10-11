@@ -2,27 +2,58 @@ import 'package:flutter/material.dart';
 
 import '../api/probe.dart';
 import '../state/app_state.dart';
+import '../state/server_store.dart';
 import '../state/settings.dart';
+import 'theme.dart';
 
 /// 服务器配置页：地址 + TLS / 明文策略 + 测试连接。
+///
+/// 三种进入方式共用一个表单：
+/// - 首启（无档案）：保存即建首条档案并进登录页；
+/// - 添加（`isNew`）：保存即**追加**一条新档案并切过去；
+/// - 编辑（`editingId`）：改写那一条档案的连接参数。
 class ServerSetupPage extends StatefulWidget {
-  const ServerSetupPage({super.key, required this.state});
+  const ServerSetupPage({
+    super.key,
+    required this.state,
+    this.isNew = false,
+    this.editingId,
+  });
 
   final AppState state;
+
+  /// 追加一条新档案。
+  final bool isNew;
+
+  /// 编辑已有档案的 id；为 `null` 表示编辑当前（或首启时新建）。
+  final String? editingId;
 
   @override
   State<ServerSetupPage> createState() => _ServerSetupPageState();
 }
 
 class _ServerSetupPageState extends State<ServerSetupPage> {
+  late final AppSettings _initial = _initialSettings();
   late final TextEditingController _url = TextEditingController(
-    text: widget.state.settings.baseUrl,
+    text: widget.isNew ? '' : _initial.baseUrl,
   );
   late final TextEditingController _fingerprint = TextEditingController(
-    text: widget.state.settings.certFingerprint ?? '',
+    text: widget.isNew ? '' : (_initial.certFingerprint ?? ''),
   );
-  late bool _allowSelfSigned = widget.state.settings.allowSelfSigned;
-  late bool _allowCleartext = widget.state.settings.allowCleartext;
+  late bool _allowSelfSigned = widget.isNew ? false : _initial.allowSelfSigned;
+  late bool _allowCleartext = widget.isNew ? false : _initial.allowCleartext;
+
+  AppSettings _initialSettings() {
+    final String? id = widget.editingId;
+    if (id != null) {
+      for (final ServerProfile p in widget.state.servers) {
+        if (p.id == id) {
+          return p.settings;
+        }
+      }
+    }
+    return widget.state.settings;
+  }
 
   String? _urlError;
   String? _formError;
@@ -89,16 +120,27 @@ class _ServerSetupPageState extends State<ServerSetupPage> {
       _urlError = null;
       _formError = null;
     });
-    await widget.state.saveSettings(next);
+    final String? id = widget.editingId;
+    if (widget.isNew) {
+      await widget.state.addServerWith(next);
+    } else if (id != null) {
+      await widget.state.saveProfileSettings(id, next);
+    } else {
+      await widget.state.saveSettings(next);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('连接服务器')),
+      appBar: AppBar(
+        title: Text(
+          widget.isNew ? '添加服务器' : '连接服务器',
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(EhSpacing.l),
         children: <Widget>[
           const Text('填入 EhBot 服务地址；反向代理有路径前缀时一并带上。'),
           const SizedBox(height: 12),

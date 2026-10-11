@@ -237,3 +237,25 @@
   的可移植断言代替。若运营者要黄金基线，可另开一期，并配 `--update-goldens` 指引。
 - 文档：`AgentHelp/PHASES.md`（M7-D 完成，M7 整体收尾）。
 - 状态：**M7 全部四个子阶段完成**（基线 105 → 140，契约零破坏）。
+
+## M8-A · 2026-10-11 · 多服务器 UI（基线 140 → 144）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`144 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：无（纯本地档案管理）。
+- 改动：
+  - `lib/ui/servers_page.dart`（新增）：列出全部服务器档案，当前那台打勾；
+    点另一台即切换（`switchServer` + 自动返回）；右上角 `+` 进添加表单；
+    每行 `PopupMenuButton` 提供 编辑 / 重命名 / 删除。
+  - `lib/ui/server_setup_page.dart`：新增 `isNew`（追加档案）与 `editingId`（编辑指定档案）
+    两个入参，三种进入方式共用一个表单；保存分别走 `addServerWith` / `saveProfileSettings` /
+    旧的 `saveSettings`（首启路径不变，既有测试零改动）。
+  - `lib/state/app_state.dart`：新增 `addServerWith()` 与 `saveProfileSettings()`。
+  - `lib/ui/home_shell.dart`：顶栏新增服务器切换入口（`shell-open-servers`，显示当前档案名），
+    设置图标保留。
+  - `lib/ui/login_page.dart`：多档案时「更换服务器」进服务器列表页；单档案时仍回到表单。
+  - `test/ui/servers_page_test.dart`（新增 4 条）：列出并标当前 / 切换并返回 / `+` 进添加表单 /
+    删除当前后回落。
+- 验证：`flutter analyze` 零告警；`flutter test` → 144 / 0 failed（140 + 4）。
+- 文档：`AgentHelp/PHASES.md`（M8-A 状态）。
+- 状态：**已落地并提交**；下一步 M8-B（后端契约文档）。

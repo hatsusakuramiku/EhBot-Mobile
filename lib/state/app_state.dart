@@ -219,6 +219,61 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 新增一台服务器档案并切过去（用于「添加服务器」流程）。
+  Future<void> addServerWith(AppSettings next, {String? label}) async {
+    _disposeSession();
+    await tokenStore.clear();
+    final ServerProfile created = ServerProfile(
+      id: newServerId(),
+      label: label ?? (next.baseUri?.host ?? ''),
+      settings: next,
+    );
+    servers = <ServerProfile>[...servers, created];
+    activeServerId = created.id;
+    settings = next;
+    await serverStore.saveAll(servers);
+    await serverStore.saveActiveId(activeServerId);
+    notice = null;
+    _setStage(next.isConfigured ? AppStage.login : AppStage.serverSetup);
+  }
+
+  /// 保存某台指定档案的连接参数（编辑非当前服务器时用）。
+  Future<void> saveProfileSettings(
+    String id,
+    AppSettings next, {
+    String? label,
+  }) async {
+    final ServerProfile target = servers.firstWhere(
+      (ServerProfile p) => p.id == id,
+      orElse: () => const ServerProfile(
+        id: '',
+        label: '',
+        settings: AppSettings(),
+      ),
+    );
+    if (target.id.isEmpty) {
+      return;
+    }
+    final ServerProfile updated = target.copyWith(
+      label: label ?? target.label,
+      settings: next,
+    );
+    servers = <ServerProfile>[
+      for (final ServerProfile p in servers)
+        if (p.id == id) updated else p,
+    ];
+    await serverStore.saveAll(servers);
+    if (id == activeServerId) {
+      _disposeSession();
+      await tokenStore.clear();
+      settings = next;
+      notice = null;
+      _setStage(next.isConfigured ? AppStage.login : AppStage.serverSetup);
+      return;
+    }
+    notifyListeners();
+  }
+
   /// 删除一台档案；删的若是当前服务器，则回服务器配置页。
   Future<void> removeServer(String id) async {
     final bool wasActive = id == activeServerId;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/auth_session.dart';
 import '../state/app_state.dart';
 import 'error_text.dart';
+import 'servers_page.dart';
 import 'theme.dart';
 import 'widgets/eh_card.dart';
 
@@ -110,7 +111,19 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           TextButton(
-            onPressed: widget.state.editServer,
+            key: const ValueKey<String>('login-open-servers'),
+            onPressed: () {
+              if (widget.state.servers.length > 1) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext _) =>
+                        ServersPage(state: widget.state),
+                  ),
+                );
+              } else {
+                widget.state.editServer();
+              }
+            },
             child: const Text('更换服务器'),
           ),
         ],

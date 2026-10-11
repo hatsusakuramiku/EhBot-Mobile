@@ -13,6 +13,7 @@ import 'candidates_page.dart';
 import 'dashboard_page.dart';
 import 'downloaded_page.dart';
 import 'settings_page.dart';
+import 'servers_page.dart';
 import 'widgets/live_status_banner.dart';
 import 'widgets/nav_bar.dart';
 
@@ -92,7 +93,25 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
+  void _openServers() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext _) => ServersPage(state: widget.state),
+      ),
+    );
+  }
+
   List<Widget> _appBarActions() => <Widget>[
+    TextButton.icon(
+      key: const ValueKey<String>('shell-open-servers'),
+      onPressed: _openServers,
+      icon: const Icon(Icons.dns_outlined, size: 18),
+      label: Text(
+        widget.state.activeServer?.effectiveLabel ?? '服务器',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
     IconButton(
       key: const ValueKey<String>('shell-open-settings'),
       tooltip: '设置',
