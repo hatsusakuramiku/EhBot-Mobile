@@ -30,7 +30,7 @@
 | M8-A | 多服务器 UI（选择 / 编辑 / 切换） | **完成**（基线 144） | `progress.md` M8-A |
 | M8-B | 后端契约（EhBot 仓库 `B-M8`，本仓只改 `CONTRACT.md`） | **完成**（契约快照已写入 §7） | `CONTRACT.md` §7 |
 | M8-C | Manual Add + Dedup | **完成**（基线 150） | `progress.md` M8-C |
-| M8-D | Logs live（SSE） | 待实施 | 同上 §7 |
+| M8-D | Logs live（SSE） | **完成**（基线 152） | `progress.md` M8-D |
 | M8-E | Settings 八区 | 待实施 | 同上 §7 |
 | M8-F | 多选 + 滑动手势 | 待实施 | 同上 §7 |
 

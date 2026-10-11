@@ -12,6 +12,7 @@ import 'activity_page.dart';
 import 'candidates_page.dart';
 import 'dashboard_page.dart';
 import 'downloaded_page.dart';
+import 'logs_page.dart';
 import 'settings_page.dart';
 import 'servers_page.dart';
 import 'widgets/live_status_banner.dart';
@@ -165,6 +166,7 @@ class _HomeShellState extends State<HomeShell> {
                   thumbnails: thumbnails,
                   appBarActions: actions,
                 ),
+                LogsPage(api: api),
               ],
             ),
           ),
@@ -193,6 +195,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: Icon(Icons.inventory_2_outlined),
             selectedIcon: Icon(Icons.inventory_2),
             label: '已下载',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: '日志',
           ),
         ],
       ),

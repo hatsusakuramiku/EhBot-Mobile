@@ -724,6 +724,86 @@ class DedupResult {
   final String message;
 }
 
+/// 一条运行日志（`GET /api/v1/logs` 与 `/logs/stream`）。
+class LogEntry {
+  const LogEntry({
+    required this.level,
+    this.timestamp,
+    this.logger = '',
+    this.event = '',
+    this.raw = '',
+    this.errorMessage = '',
+    this.errorCode = '',
+    this.jobId = '',
+    this.candidateId = '',
+    this.requestId = '',
+    this.exception = '',
+  });
+
+  factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
+    level: StatusView.fromJson(json['level']),
+    timestamp: parseTimestamp(json['timestamp']),
+    logger: asString(json['logger']),
+    event: asString(json['event']),
+    raw: asString(json['raw']),
+    errorMessage: asString(json['error_message']),
+    errorCode: asString(json['error_code']),
+    jobId: asString(json['job_id']),
+    candidateId: asString(json['candidate_id']),
+    requestId: asString(json['request_id']),
+    exception: asString(json['exception']),
+  );
+
+  final StatusView level;
+  final DateTime? timestamp;
+  final String logger;
+  final String event;
+  final String raw;
+  final String errorMessage;
+  final String errorCode;
+  final String jobId;
+  final String candidateId;
+  final String requestId;
+  final String exception;
+
+  String get message => raw.isNotEmpty ? raw : event;
+}
+
+/// 日志等级筛选项（`code` 为空表示「全部」）。
+class LogLevelOption {
+  const LogLevelOption({required this.code, required this.label});
+
+  factory LogLevelOption.fromJson(Map<String, dynamic> json) => LogLevelOption(
+    code: asString(json['code']),
+    label: asString(json['label']),
+  );
+
+  final String code;
+  final String label;
+}
+
+/// `GET /api/v1/logs` 的一页。
+class LogsPageData {
+  const LogsPageData({
+    this.entries = const <LogEntry>[],
+    this.levels = const <LogLevelOption>[],
+    this.level = '',
+    this.limit = 200,
+  });
+
+  factory LogsPageData.fromJson(Map<String, dynamic> json) => LogsPageData(
+    entries: asMapList(json['entries']).map(LogEntry.fromJson).toList(),
+    levels: asMapList(json['levels']).map(LogLevelOption.fromJson).toList(),
+    level: asString(json['level']),
+    limit: asInt(json['limit'], 200),
+  );
+
+  final List<LogEntry> entries;
+  final List<LogLevelOption> levels;
+  final String level;
+  final int limit;
+}
+
 String asString(Object? value, [String fallback = '']) =>
     value is String ? value : (value == null ? fallback : '$value');
 

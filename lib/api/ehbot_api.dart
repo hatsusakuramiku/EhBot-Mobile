@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 
 import 'auth_client.dart';
+import 'events.dart';
 import 'json_io.dart';
 import 'models.dart';
 
@@ -115,6 +116,22 @@ class EhBotApi {
     );
     return DedupResult.fromJson(_ok(response));
   }
+
+  /// 历史日志。[level] 为展示下限，空串表示「全部」。
+  Future<LogsPageData> logs({String level = '', int limit = 200}) async {
+    final http.Response response = await client.get(
+      '/api/v1/logs',
+      query: <String, String>{
+        if (level.isNotEmpty) 'level': level,
+        'limit': '$limit',
+      },
+    );
+    return LogsPageData.fromJson(_ok(response));
+  }
+
+  /// 实时日志流（SSE）。后端未实现时抛 404。
+  Stream<LiveEvent> logsStream() =>
+      SseEventSource(client: client, path: '/api/v1/logs/stream').connect();
 
   Map<String, dynamic> _ok(http.Response response) =>
       decodeJsonObject(ensureSuccess(response));

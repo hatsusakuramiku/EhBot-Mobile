@@ -291,3 +291,20 @@
     `需干预（1）` 不被构建，M6 断言失败）；「快捷操作」置于页尾以保持需干预行位置。
 - 文档：`AgentHelp/PHASES.md`（M8-B / M8-C 状态）。
 - 状态：**已落地并提交**；下一步 M8-D（日志实时流）。
+
+## M8-D · 2026-10-11 · 日志实时流（基线 150 → 152）
+
+- 版本：Flutter 3.47.6 stable。
+- 测试基线：`152 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：`B-M8`（未实现）；404 时页面给「后端未就绪」。
+- 改动：
+  - `lib/api/models.dart`：新增 `LogEntry` / `LogLevelOption` / `LogsPageData`。
+  - `lib/api/ehbot_api.dart`：新增 `logs({level, limit})` 与 `logsStream()`
+    （复用 `SseEventSource`，路径 `/api/v1/logs/stream`）。
+  - `lib/ui/logs_page.dart`（新增）：大标题 + 级别筛选 + 暂停/继续；
+    历史一次拉取、实时经 SSE 前插；`logs-pause` / `logs-level-<code>` 为测试键。
+  - `lib/ui/home_shell.dart`：底部导航新增第 5 项「日志」，指向 `LogsPage`。
+  - `test/ui/logs_page_test.dart`（2 条）：历史渲染 + 控件存在 / 404 说明。
+- 验证：`flutter analyze` 零告警；`flutter test` → 152 / 0 failed（150 + 2）。
+- 文档：`AgentHelp/PHASES.md`（M8-D 状态）。
+- 状态：**已落地并提交**；下一步 M8-E（设置八区）。
