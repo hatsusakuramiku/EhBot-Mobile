@@ -135,3 +135,27 @@
 - `README.md`：本期无变更。
 - `CHANGELOG.md`：本期无变更（要等 M7 实现合入再升 v0.2.0）。
 - 全局 skill 同步：`C:\Users\79240\.codex\skills\flutter-ui-ux\` 5 个文件齐了。
+
+## M7-A · 2026-10-11 · 主题 + 设计 token + 13 个新组件（基线 105 → 132）
+
+- 版本：Flutter 3.47.6 stable；App 版本仍 v0.1.0（M7 全部完成后升 v0.2.0）。
+- 测试基线：`132 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：不变（本子期不动 API）。
+- 改动：
+  - `lib/ui/theme.dart`（新增）：`EhSpacing` / `EhRadius` / `EhAnim` / `EhBreakpoints`
+    四组设计 token；`AppTheme.light()`/`dark()`（M3 + seed `0xFFE91E63`，
+    cache `cardTheme` / `filledButtonTheme` / `outlinedButtonTheme` / `chipTheme` /
+    `appBarTheme` / `bottomSheetTheme` / `dividerTheme`）；`AppTheme.toneColor` /
+    `onToneColor` 把后端 `StatusView.tone` 投影到 M3 语义色。
+  - `lib/ui/widgets/` 新增 13 件：`eh_card` / `tone_chip` / `cover_thumb` / `tag_chip` /
+    `empty_state` / `section_header` / `menu_fab` / `bottom_sheet` / `search_bar` /
+    `large_title_app_bar` / `metric_strip` / `nav_bar` / `gap`。
+  - `lib/ui/app.dart`：`MaterialApp` 接 `AppTheme.light()`/`dark()` + `ThemeMode.system`。
+  - `test/widgets/` 新增 11 个测试文件（组件渲染 + 交互 + tone 5 色 + 主题/ token 断言）。
+- 验证：`flutter analyze` 零告警；`flutter test` → 132 / 0 failed（M6 基线 105 + 新增 27）。
+- 依赖变更：**移除 `dynamic_color`**。它的 2.1.0 依赖独立 `material_ui` 包，
+  其 `ColorScheme`/`Widget` 与 `package:flutter/material.dart` 不是同一套类型，
+  跨包类型冲突无法在同一 `MaterialApp` 里共存。动态取色本是可选润色，主题已有
+  seed 兜底，故直接去掉该依赖，保持全仓统一走 `flutter/material`。
+- 文档：`AgentHelp/PHASES.md` 升基线链 + M7 拆成 A–D、M8 拆成 A–F 状态表。
+- 状态：**已落地并提交**；下一步 M7-B（七页重写）。

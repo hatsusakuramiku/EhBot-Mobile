@@ -1,7 +1,7 @@
 # 阶段索引
 
 > **先读这份**。每条一行摘要 + `progress.md` 的行号指针；要细节再下钻。
-> 基线链（移动端）：**M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 → M6 = 105 tests / 0 failed**
+> 基线链（移动端）：**M0 = 1 → M1 = 45 → M2 = 56 → M3 = 76 → M4 = 90 → M5 = 90 → M6 = 105 → M7-A = 132 tests / 0 failed**
 > （`flutter analyze` 零告警）。后端基线在 EhBot 仓库，与本仓库分开记。
 
 ## 一、后端依赖（在 EhBot 仓库实施，本仓库只依赖）
@@ -23,15 +23,27 @@
 | M4 | SSE + 轮询回退 + 离线/错误态 + v0.1.0 打磨 | **完成** | `progress.md` M4 |
 | M5 | 仓库改名 `ehbot-mobile` → `EhBot-Mobile` + 文档同步 | **本地完成**，远端待配置 | `progress.md` M5 |
 | M6 | 工作台 / 候选 / 活动 / 已下载 行可点 + 设置页只读 + 作品详情按钮动态渲染 | **完成** | `progress.md` M6 |
-| M7 | UI 重构：Material 3 设计 token + 10 个新组件 + 7 页重写 + 多服务器模型与切换 | **提案待审阅** | `M7_UI_REDESIGN_PROPOSAL.md` |
-| M8 | WEBUI 功能全复刻：manual_add / dedup / logs / settings 8 区 / 批量 / 多服务器 UI | **提案待审阅** | `M8_FEATURE_REPLICATION_PROPOSAL.md` |
+| M7-A | 主题 + 设计 token + 13 个新组件 + 组件测试 | **完成**（基线 `132 tests / 0 failed`） | `progress.md` M7-A |
+| M7-B | 七页重写（工作台 / 候选 / 活动 / 已下载 / 详情 / 设置 / 登录） | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §5 |
+| M7-C | 多服务器数据层 + 启动迁移 | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §4.4 |
+| M7-D | 动效与响应式打磨（`RepaintBoundary` / 三断点 / 黄金截图） | 待实施 | `M7_UI_REDESIGN_PROPOSAL.md` §7 |
+| M8-A | 多服务器 UI（选择 / 编辑 / 切换） | 待实施 | `M8_FEATURE_REPLICATION_PROPOSAL.md` §7 |
+| M8-B | 后端契约（EhBot 仓库 `B-M8`，本仓只改 `CONTRACT.md`） | 待实施 | 同上 §4.2 |
+| M8-C | Manual Add + Dedup | 待实施 | 同上 §7 |
+| M8-D | Logs live（SSE） | 待实施 | 同上 §7 |
+| M8-E | Settings 八区 | 待实施 | 同上 §7 |
+| M8-F | 多选 + 滑动手势 | 待实施 | 同上 §7 |
 
 ## 三、当前状态
 
 - M0–M6 已完成：文档框架、Flutter 工程与 CI、双登录与
   会话保持、带鉴权的封面缓存、四块数据页与审核、SSE + 轮询
   间隔、仓库重命名、所有行可点 + 设置只读 + 详情动态按钮；基线 `M6 = 105 tests / 0 failed`。
-- **M7（UI 重构）**与 **M8（功能全复刻）**两份提案已写完，等运营者按 AGENTS.md "先写方案，运营者审阅，再动手" 约定放行后落地。
+- **M7 / M8 已由运营者放行**，正在按 sub-phase 逐步落地：`M7-A` 已完成
+  （`theme.dart` + 13 个组件 + 组件测试，基线 `132 tests / 0 failed`）。
+- 依赖变更：`dynamic_color` 已移除——它的 2.1.0 依赖独立 `material_ui` 包，
+  其 `ColorScheme`/`Widget` 与 `package:flutter/material.dart` 不是同一套类型，
+  引发跨包类型冲突；主题改为 seed 兜底色（`0xFFE91E63`）。
 - M5 已把本地仓库目录和当前文档统一为 `EhBot-Mobile`；Dart/Android/iOS 发布标识不变。
   当前仓库没有 Git remote，远端仓库创建或配置后仍待推送。
 - v0.1.0 MVP 验收线见 `DEVELOPMENT_PLAN.md` §1；M7/M8 落地后基线与版本会进一步升到 v0.2.0 / v0.3.0。

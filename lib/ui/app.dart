@@ -4,8 +4,9 @@ import '../state/app_state.dart';
 import 'home_shell.dart';
 import 'login_page.dart';
 import 'server_setup_page.dart';
+import 'theme.dart';
 
-/// 应用根：按 [AppState.stage] 决定首屏。
+/// 应用根：按 [AppState.stage] 决定首屏。主题走 [AppTheme]（M3 + seed 粉红）。
 class EhBotApp extends StatelessWidget {
   const EhBotApp({super.key, required this.state});
 
@@ -15,9 +16,11 @@ class EhBotApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: state,
-      builder: (BuildContext context, Widget? child) => MaterialApp(
+      builder: (BuildContext context, Widget? _) => MaterialApp(
         title: 'EhBot',
-        theme: ThemeData(colorSchemeSeed: Colors.indigo),
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.system,
         home: switch (state.stage) {
           AppStage.loading => const _LoadingPage(),
           AppStage.serverSetup => ServerSetupPage(state: state),
