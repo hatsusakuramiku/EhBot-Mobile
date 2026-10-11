@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/ehbot_api.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
+import 'servers_page.dart';
 import 'settings_sections_page.dart';
 import 'widgets/appearance_section.dart';
 import 'widgets/eh_card.dart';
@@ -10,7 +11,12 @@ import 'widgets/empty_state.dart';
 import 'widgets/section_header.dart';
 import 'widgets/tone_chip.dart';
 
-/// 设置：分区呈现当前会话状态（M7 只读；M8-E 起接各编辑页）。
+/// 设置：本机外观 + 服务器档案 + 当前会话 + 后端分区设置。
+///
+/// **不是账号管理台**：EhBot 是单用户系统（现在与将来都不考虑多用户），
+/// 所以这里只有「当前用的是什么凭据」这一行只读信息，没有用户列表。
+/// 可改的东西有两类：本机偏好（外观）与服务器档案（多台服务器，不是多个账号），
+/// 其余是后端的分区设置。
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.state});
 
@@ -86,7 +92,36 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: AppearanceSection(state: widget.state),
             ),
-            const SectionHeader(title: '账号'),
+            const SectionHeader(title: '服务器'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: EhCard(
+                key: const ValueKey<String>('settings-open-servers'),
+                dense: true,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext _) => ServersPage(state: widget.state),
+                  ),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.dns_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        baseUrl.isEmpty
+                            ? '还没有配置服务器'
+                            : '当前：$baseUrl\n'
+                                  '可添加 / 编辑 / 切换多台服务器（不是多个账号）',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right),
+                  ],
+                ),
+              ),
+            ),
+            const SectionHeader(title: '当前凭据'),
             _card(<Widget>[
               _kv('用户名', who?.username ?? '—'),
               _kv('凭据类型', credentialKind),
@@ -97,18 +132,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     : who!.expiresAt!.toLocal().toString(),
               ),
               _kv('需改密', who?.mustChangePassword == true ? '是' : '否'),
-            ]),
-            const SectionHeader(title: '服务器'),
-            _card(<Widget>[
-              _kv('Base URL', baseUrl.isEmpty ? '—' : baseUrl),
               _kv('允许自签证书', widget.state.settings.allowSelfSigned ? '是' : '否'),
               _kv('允许明文 HTTP', widget.state.settings.isCleartext ? '是' : '否'),
             ]),
-            const SectionHeader(title: '外部服务'),
-            _connections(),
-            const SectionHeader(title: '分区设置'),
+            const SectionHeader(title: '后端分区设置'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '外部连接 / 系统 / 密码库可直接编辑；其余六区目前只读。',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SectionHeader(title: '外部服务'),
+            _connections(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: EhCard(
                 key: const ValueKey<String>('settings-open-sections'),
                 dense: true,

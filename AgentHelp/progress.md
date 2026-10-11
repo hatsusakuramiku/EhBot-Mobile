@@ -479,3 +479,42 @@
 - 验证：`flutter analyze` 零告警；`flutter test` → 187 / 0 failed（184 + 3）。
 - 文档：`AgentHelp/PHASES.md`、`README.md`、`CHANGELOG.md`。
 - 状态：**已落地**；M9 只剩 M9-E（设置页）。
+
+## M9-E · 2026-10-11 · 设置页：外观 + 服务器 + 三区写入 + 六区只读（基线 187 → 196）
+
+- 版本：Flutter 3.47.6 stable；App v0.3.0。
+- 测试基线：`196 tests / 0 failed`（`flutter analyze` 零告警）。
+- 后端依赖：**已就绪**——R67（`PUT settings/connections`）、R68（`PUT settings/system`）、
+  R69（`PUT settings/passwords`）；六区写入仍未实现。
+- 背景：运营者实测第 2 项「设置页面完全不可用，根本没有做好适配，无法编辑设置」，
+  加上两条约束：**行为与 WebUI 一致**、**EhBot 单用户，设置不按账号管理**。
+- 改动：
+  - `lib/ui/settings_page.dart`：重排为 **外观 → 服务器 → 当前凭据（只读）→
+    后端分区设置入口 → 外部服务 → 启动告警 → 退出登录**。「服务器」是通往
+    `ServersPage` 的卡片（多台服务器，不是多个账号）；原来的「账号」区改名
+    「当前凭据」并只留一行只读信息；本机的自签证书 / 明文 HTTP 开关也并到这里。
+  - `lib/ui/settings_editors.dart`（新增）：
+    - `SettingsWriteMixin`：三区共用的「置忙 → PUT → 用响应替换视图 / 报错」外壳。
+      写入响应**就是**该分区写后的快照，所以不再多打一次 GET。
+    - `ConnectionsEditor`：Telegram Bot Token / Telegram 用户（api_id + api_hash +
+      phone → 验证码或两步验证 → 断开）/ ExHentai 三项 Cookie，7 个 action 全覆盖；
+      凭据输入框永远为空（后端不回显明文）。
+    - `SystemEditor`：并发 / 轮询间隔 / 时区 / 自动审批间隔 / 移动端两个 TTL /
+      日志等级（下拉取自后端 `logs.levels`）/ 下载来源优先级（上移下移，不用手写 CSV）。
+      只提交**改动过**的字段——后端「只写出现过的字段」，把没动的字段一起发上去
+      等于替运营者重写了它们。
+    - `PasswordsEditor`：API Key 生成（明文**只在响应那一次**用一个对话框显示，
+      不进日志、不落盘）/ 撤销；归档密码列表 + 新增（名称 / 密码 / 优先级 / 启用）+
+      删除（先确认）。
+    - `ReadOnlySection`：六区只读。**按顶层 key 分成卡片**，组内摊平一层；
+      列表最多摊开 5 条（配置清单只报条数等于把内容藏起来，全摊开又会把页面撑爆），
+      系统区那份日志尾巴交给日志页不再重复渲染。
+  - `lib/ui/settings_sections_page.dart`：按分区 code 分派到编辑器 / 只读视图；
+    删掉原来的 `_flatten` 扁平 key-value 渲染。
+  - 测试：`test/ui/settings_editors_test.dart`（新增 6 条：两区 PUT body、
+    「只提交改动过的字段」、优先级重排、API Key 一次性明文、归档密码增删）；
+    `settings_sections_page_test.dart` 重写（九区齐全 / 连接区三张卡与验证码那一步 /
+    只读分组 / 404 说明）；`settings_page_test.dart` 跟上新分区名。
+- 验证：`flutter analyze` 零告警；`flutter test` → 196 / 0 failed（187 + 9）。
+- 文档：`AgentHelp/PHASES.md`、`README.md`（设置整节重写）、`CHANGELOG.md`。
+- 状态：**已落地**。M9 六个子阶段全部完成（基线 158 → 196）。

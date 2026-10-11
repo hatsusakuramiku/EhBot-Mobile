@@ -30,11 +30,18 @@ void main() {
     final AppState state = await makeBootstrappedState(client);
     await tester.pumpWidget(MaterialApp(home: SettingsPage(state: state)));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('账号'), 100);
-    expect(find.text('账号'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('当前凭据'), 100);
+    expect(find.text('当前凭据'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('服务器'), 100);
     expect(find.text('服务器'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('外部服务'), 100);
+    // 服务器那一块是通往 ServersPage 的入口（可编辑、可切换多台）。
+    expect(
+      find.byKey(const ValueKey<String>('settings-open-servers')),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(find.text('后端分区设置'), 100);
+    expect(find.text('后端分区设置'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('外部服务'), 200);
     expect(find.text('外部服务'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey<String>('settings-logout')),

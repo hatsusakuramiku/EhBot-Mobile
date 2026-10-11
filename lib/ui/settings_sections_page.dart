@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../api/ehbot_api.dart';
 import 'error_text.dart';
+import 'settings_editors.dart';
 import 'theme.dart';
 import 'widgets/async_view.dart';
-import 'widgets/eh_card.dart';
-import 'widgets/section_header.dart';
 
 /// 设置分区（M8-E）。key 与后端 `/api/v1/settings/<key>` 一一对应。
 class SettingsSection {
@@ -176,6 +175,10 @@ class _SettingsSectionViewState extends State<SettingsSectionView> {
     widget.section.code,
   );
 
+  /// 写入端点返回的就是**写后的快照**，直接拿它替换当前视图，
+  /// 不再多打一次 GET。
+  Map<String, dynamic>? _written;
+
   @override
   void didUpdateWidget(SettingsSectionView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -197,71 +200,51 @@ class _SettingsSectionViewState extends State<SettingsSectionView> {
     child: AsyncView<Map<String, dynamic>>(
       future: _future,
       onRetry: _reload,
-      builder: (BuildContext context, Map<String, dynamic> data) => ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: <Widget>[
-          SectionHeader(title: widget.section.label),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(widget.section.summary),
-          ),
-          const SizedBox(height: EhSpacing.m),
-          for (final _Kv kv in _flatten(data)) _kvCard(context, kv),
-          if (data.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('该分区暂时没有可显示的值。'),
-            ),
-        ],
-      ),
+      builder: (BuildContext context, Map<String, dynamic> loaded) {
+        final Map<String, dynamic> data = _written ?? loaded;
+        if (kWritableSettingsSections.contains(widget.section.code)) {
+          return _editor(context, data);
+        }
+        return ReadOnlySection(
+          title: widget.section.label,
+          summary: widget.section.summary,
+          data: data,
+        );
+      },
     ),
   );
 
-  Widget _kvCard(BuildContext context, _Kv kv) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: EhCard(
-      dense: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          SizedBox(
-            width: 140,
-            child: Text(kv.key, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          Expanded(child: Text(kv.value)),
-        ],
-      ),
-    ),
-  );
-}
+  /// 三个有写入端点的分区走各自的编辑器（EhBot R67–R69）。
+  Widget _editor(BuildContext context, Map<String, dynamic> data) =>
+      switch (widget.section.code) {
+        kSettingsConnections => ConnectionsEditor(
+          api: widget.api,
+          snapshot: data,
+          onSaved: _adopt,
+        ),
+        kSettingsSystem => SystemEditor(
+          api: widget.api,
+          snapshot: data,
+          onSaved: _adopt,
+        ),
+        kSettingsPasswords => PasswordsEditor(
+          api: widget.api,
+          snapshot: data,
+          onSaved: _adopt,
+        ),
+        _ => ReadOnlySection(
+          title: widget.section.label,
+          summary: widget.section.summary,
+          data: data,
+        ),
+      };
 
-class _Kv {
-  const _Kv(this.key, this.value);
-  final String key;
-  final String value;
-}
-
-/// 把后端 JSON 摊平成 key/value 列表（只读），后端字段一变这里自动跟上。
-List<_Kv> _flatten(Map<String, dynamic> data) {
-  final List<_Kv> out = <_Kv>[];
-  void walk(String prefix, Object? value) {
-    if (value is Map) {
-      for (final MapEntry<dynamic, dynamic> e in value.entries) {
-        walk(prefix.isEmpty ? '${e.key}' : '$prefix.${e.key}', e.value);
-      }
-      return;
+  void _adopt(Map<String, dynamic> snapshot) {
+    if (mounted) {
+      setState(() => _written = snapshot);
     }
-    if (value is List) {
-      out.add(_Kv(prefix, value.isEmpty ? '—' : value.join('、')));
-      return;
-    }
-    out.add(_Kv(prefix, value == null ? '—' : '$value'));
   }
 
-  for (final MapEntry<String, dynamic> e in data.entries) {
-    walk(e.key, e.value);
-  }
-  return out;
 }
 
 /// 供设置页跳转用的入口卡片文案。
